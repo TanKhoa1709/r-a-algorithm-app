@@ -1,0 +1,8 @@
+{
+  "port": 8080,
+  "maxConcurrentAccess": 1,
+  "accessTimeout": 30000,
+  "enableMonitoring": true,
+  "enableViolationDetection": true
+}
+
