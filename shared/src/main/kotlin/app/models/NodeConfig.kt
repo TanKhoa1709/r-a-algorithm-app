@@ -12,7 +12,7 @@ data class NodeConfig(
     val nodeId: String = UUID.randomUUID().toString(),
     val host: String = InetAddress.getLocalHost().hostName,
     val port: Int = 8080,
-    val csHostUrl: String = System.getenv("CS_HOST_URL"),
+    val csHostUrl: String = "http://127.0.0.1:8080",
     val discoveryPort: Int = 8888,
     val heartbeatInterval: Long = 5000,
     val requestTimeout: Long = 30000
