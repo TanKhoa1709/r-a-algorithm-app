@@ -2,7 +2,7 @@ package app.node
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import app.ui.theme.CommonTheme
+import app.node.ui.theme.NodeTheme
 import app.node.ui.NodeUI
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -42,7 +42,7 @@ fun main(args: Array<String>) {
                 },
                 title = "Ricart-Agrawala Node: ${sharedConfig.nodeId}"
             ) {
-                CommonTheme {
+                NodeTheme {
                     NodeUI(app.getController())
                 }
             }

@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -37,15 +39,23 @@ fun PeersList(
             } else {
                 LazyColumn {
                     items(peers.toList()) { peer ->
-                        ListItem(
-                            text = { Text(peer) },
-                            icon = {
-                                Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Check,
-                                    contentDescription = "Connected"
-                                )
-                            }
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Check,
+                                contentDescription = "Connected",
+                                tint = MaterialTheme.colors.primary,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                text = peer,
+                                style = MaterialTheme.typography.body1
+                            )
+                        }
                         Divider()
                     }
                 }

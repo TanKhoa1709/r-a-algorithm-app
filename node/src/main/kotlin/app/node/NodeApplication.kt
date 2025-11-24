@@ -93,7 +93,9 @@ class NodeApplication(private val config: NodeConfig) {
         nodeAnnouncer.stop()
         serviceDiscovery.stop()
         webSocketServer.stop()
-        connectionManager.close()
+        runBlocking {
+            connectionManager.close()
+        }
     }
     
     fun getController(): NodeController = controller

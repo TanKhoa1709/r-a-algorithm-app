@@ -6,8 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.node.controller.NodeController
-import app.ui.components.*
-import app.ui.theme.CommonTheme
 import app.node.ui.components.*
 
 /**

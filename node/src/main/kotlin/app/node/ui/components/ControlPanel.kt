@@ -5,8 +5,6 @@ import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import app.ui.components.PrimaryButton
-import app.ui.components.SecondaryButton
 
 @Composable
 fun ControlPanel(
