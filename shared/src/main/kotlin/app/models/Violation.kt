@@ -16,7 +16,6 @@ data class Violation(
 @Serializable
 enum class ViolationType {
     CONCURRENT_ACCESS,
-    UNAUTHORIZED_ACCESS,
     TIMEOUT,
     PROTOCOL_VIOLATION
 }

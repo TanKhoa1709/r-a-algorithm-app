@@ -9,13 +9,13 @@ import kotlinx.serialization.json.Json
  * Handles incoming messages
  */
 class MessageHandler {
-    fun handleMessage(message: String, onRequest: (app.proto.RequestMessage) -> Unit) {
+    fun handleMessage(message: String, onRequest: (app.proto.RAMessage) -> Unit) {
         try {
             val protocol = Json.decodeFromString<CSProtocol>(message)
-            when (MsgType.valueOf(protocol.type)) {
+            val ramessage = Json.decodeFromString<app.proto.RAMessage>(protocol.payload)
+            when (ramessage.type) {
                 MsgType.REQUEST -> {
-                    val request = Json.decodeFromString<app.proto.RequestMessage>(protocol.payload)
-                    onRequest(request)
+                    onRequest(ramessage)
                 }
                 MsgType.REPLY -> {
                     // Handle reply

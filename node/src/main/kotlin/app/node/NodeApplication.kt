@@ -101,18 +101,19 @@ class NodeApplication(private val config: NodeConfig) {
     private fun handleMessage(nodeId: String, message: String) {
         try {
             val protocol = Json.decodeFromString<app.proto.CSProtocol>(message)
-            when (protocol.type) {
-                "REQUEST" -> {
-                    val request = Json.decodeFromString<app.proto.RequestMessage>(protocol.payload)
-                    ricartAgrawala.handleRequest(request)
+            val ramessage = Json.decodeFromString<app.proto.RAMessage>(protocol.payload)
+            when (ramessage.type) {
+                app.proto.MsgType.REQUEST -> {
+                    ricartAgrawala.handleRequest(ramessage)
                 }
-                "REPLY" -> {
-                    val reply = Json.decodeFromString<app.proto.ReplyMessage>(protocol.payload)
-                    ricartAgrawala.handleReply(reply)
+                app.proto.MsgType.REPLY -> {
+                    ricartAgrawala.handleReply(ramessage)
                 }
-                "RELEASE" -> {
-                    val release = Json.decodeFromString<app.proto.ReleaseMessage>(protocol.payload)
-                    ricartAgrawala.handleRelease(release)
+                app.proto.MsgType.RELEASE -> {
+                    ricartAgrawala.handleRelease(ramessage)
+                }
+                else -> {
+                    // Unknown message type
                 }
             }
         } catch (e: Exception) {

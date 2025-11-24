@@ -1,13 +1,11 @@
 package app.net.http
 
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.routing.*
-import io.ktor.server.content.*
-import io.ktor.http.*
 import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 
 /**
@@ -15,10 +13,10 @@ import kotlinx.serialization.json.Json
  */
 class HttpServer(
     private val port: Int,
-    private val routes: Application.() -> Unit
-) {
+    private val routes: Application.() -> Unit) {
+
     private var server: ApplicationEngine? = null
-    
+
     fun start() {
         server = embeddedServer(Netty, port = port) {
             install(ContentNegotiation) {
@@ -28,11 +26,11 @@ class HttpServer(
                 })
             }
             routing {
-                routes()
+                application.routes()
             }
         }.start(wait = false)
     }
-    
+
     fun stop() {
         server?.stop(1000, 2000)
         server = null

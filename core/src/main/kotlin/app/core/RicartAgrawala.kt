@@ -1,8 +1,7 @@
 package app.core
 
-import app.proto.ReplyMessage
-import app.proto.RequestMessage
-import app.proto.ReleaseMessage
+import app.proto.MsgType
+import app.proto.RAMessage
 import java.util.UUID
 
 /**
@@ -10,9 +9,9 @@ import java.util.UUID
  */
 class RicartAgrawala(
     private val nodeId: String,
-    private val onSendRequest: (RequestMessage) -> Unit,
-    private val onSendReply: (ReplyMessage) -> Unit,
-    private val onSendRelease: (ReleaseMessage) -> Unit,
+    private val onSendRequest: (RAMessage) -> Unit,
+    private val onSendReply: (RAMessage) -> Unit,
+    private val onSendRelease: (RAMessage) -> Unit,
     private val onEnterCS: () -> Unit,
     private val onExitCS: () -> Unit
 ) {
@@ -50,7 +49,8 @@ class RicartAgrawala(
         state.requestTimestamp = timestamp
         state.requestId = requestId
         
-        val request = RequestMessage(
+        val request = RAMessage(
+            type = MsgType.REQUEST,
             timestamp = timestamp,
             nodeId = nodeId,
             requestId = requestId
@@ -77,7 +77,8 @@ class RicartAgrawala(
     /**
      * Handle incoming request message
      */
-    fun handleRequest(request: RequestMessage) {
+    fun handleRequest(request: RAMessage) {
+        require(request.type == MsgType.REQUEST) { "Expected REQUEST message type" }
         state.lamportClock.receive(request.timestamp)
         
         if (request.nodeId == nodeId) {
@@ -92,7 +93,8 @@ class RicartAgrawala(
         }
         
         if (shouldReply) {
-            val reply = ReplyMessage(
+            val reply = RAMessage(
+                type = MsgType.REPLY,
                 timestamp = state.lamportClock.tick(),
                 nodeId = nodeId,
                 requestId = request.requestId
@@ -107,7 +109,8 @@ class RicartAgrawala(
     /**
      * Handle incoming reply message
      */
-    fun handleReply(reply: ReplyMessage) {
+    fun handleReply(reply: RAMessage) {
+        require(reply.type == MsgType.REPLY) { "Expected REPLY message type" }
         state.lamportClock.receive(reply.timestamp)
         
         if (reply.nodeId == nodeId) {
@@ -129,7 +132,8 @@ class RicartAgrawala(
             throw IllegalStateException("Not in critical section")
         }
         
-        val release = ReleaseMessage(
+        val release = RAMessage(
+            type = MsgType.RELEASE,
             timestamp = state.lamportClock.tick(),
             nodeId = nodeId,
             requestId = state.requestId!!
@@ -147,7 +151,8 @@ class RicartAgrawala(
         state.pendingRequests.clear()
         
         deferredRequests.forEach { request ->
-            val reply = ReplyMessage(
+            val reply = RAMessage(
+                type = MsgType.REPLY,
                 timestamp = state.lamportClock.tick(),
                 nodeId = nodeId,
                 requestId = request.requestId
@@ -167,7 +172,8 @@ class RicartAgrawala(
     /**
      * Handle incoming release message
      */
-    fun handleRelease(release: ReleaseMessage) {
+    fun handleRelease(release: RAMessage) {
+        require(release.type == MsgType.RELEASE) { "Expected RELEASE message type" }
         state.lamportClock.receive(release.timestamp)
         // Release messages are informational, no action needed
     }

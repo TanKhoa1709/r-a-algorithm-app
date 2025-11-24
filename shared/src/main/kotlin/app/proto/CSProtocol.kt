@@ -14,16 +14,15 @@ data class CSProtocol(
     val sourceNodeId: String
 ) {
     companion object {
-        private val json = Json { }
+        private val json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
         
-        fun fromMessage(message: RAMessage, type: MsgType): CSProtocol {
-            val payload = when (message) {
-                is RequestMessage -> json.encodeToString(RequestMessage.serializer(), message)
-                is ReplyMessage -> json.encodeToString(ReplyMessage.serializer(), message)
-                is ReleaseMessage -> json.encodeToString(ReleaseMessage.serializer(), message)
-            }
+        fun fromMessage(message: RAMessage): CSProtocol {
+            val payload = json.encodeToString(RAMessage.serializer(), message)
             return CSProtocol(
-                type = type.name,
+                type = message.type.name,
                 payload = payload,
                 timestamp = message.timestamp,
                 sourceNodeId = message.nodeId

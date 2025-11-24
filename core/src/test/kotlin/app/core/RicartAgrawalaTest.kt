@@ -1,7 +1,7 @@
 package app.core
 
-import app.proto.ReplyMessage
-import app.proto.RequestMessage
+import app.proto.MsgType
+import app.proto.RAMessage
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -42,7 +42,8 @@ class RicartAgrawalaTest {
         ra.registerNode("node1")
         ra.registerNode("node2")
         
-        val request = RequestMessage(
+        val request = RAMessage(
+            type = MsgType.REQUEST,
             timestamp = 1,
             nodeId = "node2",
             requestId = "req1"

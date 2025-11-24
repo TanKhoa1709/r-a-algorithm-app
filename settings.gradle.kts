@@ -6,6 +6,5 @@ include(
     "network",
     "cs-host",
     "node",
-    "visualizer",
-    "common-ui"
+    "visualizer"
 )

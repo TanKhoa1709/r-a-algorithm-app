@@ -5,9 +5,9 @@ import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * WebSocket client for connecting to other nodes
@@ -16,7 +16,7 @@ class WebSocketClient {
     private val client = HttpClient(CIO) {
         install(WebSockets)
     }
-    
+
     suspend fun connect(
         nodeConfig: NodeConfig,
         onMessage: (String) -> Unit
@@ -39,7 +39,7 @@ class WebSocketClient {
             }
         }
     }
-    
+
     fun close() {
         client.close()
     }

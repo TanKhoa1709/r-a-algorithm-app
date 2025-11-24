@@ -1,8 +1,6 @@
 package app.core
 
 import app.proto.RAMessage
-import app.proto.RequestMessage
-import app.proto.ReplyMessage
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -15,7 +13,7 @@ data class RAState(
     var requestTimestamp: Long = 0,
     var requestId: String? = null,
     val deferredReplies: MutableSet<String> = ConcurrentHashMap.newKeySet(),
-    val pendingRequests: MutableMap<String, RequestMessage> = ConcurrentHashMap()
+    val pendingRequests: MutableMap<String, RAMessage> = ConcurrentHashMap()
 ) {
     fun isInCriticalSection(): Boolean = requesting && deferredReplies.isEmpty()
     
@@ -33,7 +31,7 @@ data class RAState(
         deferredReplies.clear()
     }
     
-    fun addPendingRequest(request: RequestMessage) {
+    fun addPendingRequest(request: RAMessage) {
         pendingRequests[request.nodeId] = request
     }
     

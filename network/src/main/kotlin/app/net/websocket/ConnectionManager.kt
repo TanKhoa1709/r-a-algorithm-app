@@ -5,9 +5,10 @@ import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -20,7 +21,7 @@ class ConnectionManager(
     private val client = HttpClient(CIO) {
         install(WebSockets)
     }
-    
+
     /**
      * Connect to a node
      */
@@ -32,7 +33,7 @@ class ConnectionManager(
                 path = "/ws"
             )
             connections[nodeConfig.nodeId] = session
-            
+
             // Start receiving messages
             CoroutineScope(Dispatchers.IO).launch {
                 try {
@@ -50,7 +51,7 @@ class ConnectionManager(
             e.printStackTrace()
         }
     }
-    
+
     /**
      * Send message to a node
      */
@@ -64,7 +65,7 @@ class ConnectionManager(
             }
         }
     }
-    
+
     /**
      * Broadcast message to all connected nodes
      */
@@ -75,11 +76,12 @@ class ConnectionManager(
                     session.send(Frame.Text(message))
                 } catch (e: Exception) {
                     // Connection lost, will be cleaned up
+                    e.printStackTrace()
                 }
             }
         }
     }
-    
+
     /**
      * Disconnect from a node
      */
@@ -87,16 +89,16 @@ class ConnectionManager(
         connections[nodeId]?.close()
         connections.remove(nodeId)
     }
-    
+
     /**
      * Close all connections
      */
-    fun close() {
+    suspend fun close() {
         connections.values.forEach { it.close() }
         connections.clear()
         client.close()
     }
-    
+
     fun isConnected(nodeId: String): Boolean = connections.containsKey(nodeId) && connections[nodeId]?.isActive == true
 }
 
