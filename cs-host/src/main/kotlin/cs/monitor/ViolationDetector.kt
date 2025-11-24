@@ -56,7 +56,7 @@ class ViolationDetector(private val enabled: Boolean) {
     fun getViolations(): List<Violation> = violations.toList()
     
     fun getViolationsByType(): Map<ViolationType, Long> {
-        return violations.groupingBy { it.type }.eachCount()
+        return violations.groupingBy { it.type }.eachCount().mapValues { it.value.toLong() }
     }
     
     fun clear() {

@@ -36,7 +36,7 @@ class AccessMonitor(private val enabled: Boolean) {
         }
     }
     
-    fun getAccessCountByNode(): Map<String, Long> {
+    fun getAccessCountByNode(): Map<String, Int> {
         return accessLog.groupingBy { it.nodeId }.eachCount()
     }
     

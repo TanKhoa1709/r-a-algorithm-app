@@ -3,6 +3,7 @@ package cs.api
 import cs.CSHost
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
+import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
