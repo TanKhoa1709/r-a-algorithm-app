@@ -3,13 +3,21 @@ package cs
 import app.models.CSState
 import app.models.CSEntry
 import app.models.Violation
+import app.models.VisualizerMetricsDto
+import app.models.VisualizerNodeDto
+import app.models.VisualizerSnapshot
 import cs.monitor.AccessMonitor
 import cs.monitor.ViolationDetector
+import cs.monitor.VisualizerBroadcaster
 import cs.resources.ResourceManager
 import cs.resources.SharedResource
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -29,16 +37,19 @@ class CSHost(
     private val totalAccesses = AtomicLong(0)
     private val violations = ConcurrentLinkedQueue<Violation>()
     private val accessMutex = Mutex()
-    
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     private val accessMonitor = AccessMonitor(config.enableMonitoring)
     private val violationDetector = ViolationDetector(config.enableViolationDetection)
-    
+
     /**
      * Request access to critical section
      */
     suspend fun requestAccess(nodeId: String, requestId: String): Boolean {
-        return accessMutex.withLock {
-            if (currentHolder.get() == null && accessQueue.isEmpty()) {
+        val granted: Boolean
+        accessMutex.withLock {
+            granted = if (currentHolder.get() == null && accessQueue.isEmpty()) {
                 grantAccess(nodeId, requestId)
                 true
             } else {
@@ -46,8 +57,11 @@ class CSHost(
                 false
             }
         }
+
+        notifyVisualizer()
+        return granted
     }
-    
+
     /**
      * Grant access to critical section
      */
@@ -55,7 +69,7 @@ class CSHost(
         val entryTime = System.currentTimeMillis()
         currentHolder.set(nodeId)
         totalAccesses.incrementAndGet()
-        
+
         val entry = CSEntry(
             nodeId = nodeId,
             requestId = requestId,
@@ -63,11 +77,11 @@ class CSHost(
             entryTime = entryTime
         )
         accessHistory.offer(entry)
-        
+
         accessMonitor.recordAccess(entry)
         violationDetector.checkAccess(entry, getState())
     }
-    
+
     /**
      * Release critical section
      */
@@ -76,7 +90,7 @@ class CSHost(
             if (currentHolder.get() == nodeId) {
                 val exitTime = System.currentTimeMillis()
                 currentHolder.set(null)
-                
+
                 // Update entry
                 val entry = accessHistory.lastOrNull { it.nodeId == nodeId && it.requestId == requestId }
                 entry?.let {
@@ -87,7 +101,7 @@ class CSHost(
                     accessHistory.remove(it)
                     accessHistory.offer(updated)
                 }
-                
+
                 // Grant access to next in queue
                 val nextNode = accessQueue.poll()
                 if (nextNode != null) {
@@ -95,8 +109,9 @@ class CSHost(
                 }
             }
         }
+        notifyVisualizer()
     }
-    
+
     /**
      * Get current state
      */
@@ -109,22 +124,74 @@ class CSHost(
             violations = violations.toList()
         )
     }
-    
+
     /**
      * Get access history
      */
     fun getAccessHistory(): List<CSEntry> = accessHistory.toList()
-    
+
     /**
      * Record violation
      */
     fun recordViolation(violation: Violation) {
         violations.offer(violation)
     }
-    
+
     /**
      * Get resource manager
      */
     fun getResourceManager(): ResourceManager = resourceManager
-}
 
+    /**
+     * Xây snapshot gửi cho visualizer
+     */
+    private fun buildSnapshot(): VisualizerSnapshot {
+        val state = getState()
+        val history = getAccessHistory()
+
+        // Tạm thời suy ra danh sách node từ history + queue + currentHolder
+        val nodeIds = buildSet {
+            addAll(state.queue)
+            state.currentHolder?.let { add(it) }
+            history.forEach { add(it.nodeId) }
+        }
+
+        val nodes = nodeIds.map { id ->
+            val csState = when {
+                state.currentHolder == id -> "HELD"
+                state.queue.contains(id) -> "WANTED"
+                else -> "IDLE"
+            }
+            VisualizerNodeDto(
+                id = id,
+                state = csState
+            )
+        }
+
+        val metricsDto = VisualizerMetricsDto(
+            totalAccesses = accessMonitor.getTotalAccesses(),
+            avgDurationMs = accessMonitor.getAverageDuration(),
+            violationCount = state.violations.size
+        )
+
+        return VisualizerSnapshot(
+            nodes = nodes,
+            currentHolder = state.currentHolder,
+            queue = state.queue,
+            accessHistory = history,
+            metrics = metricsDto
+        )
+    }
+
+    /**
+     * Gửi snapshot tới tất cả visualizer (chạy nền)
+     */
+    private fun notifyVisualizer() {
+        if (!config.enableMonitoring) return // nếu bạn muốn chỉ bật khi monitoring
+
+        val snapshot = buildSnapshot()
+        scope.launch {
+            VisualizerBroadcaster.broadcast(snapshot)
+        }
+    }
+}

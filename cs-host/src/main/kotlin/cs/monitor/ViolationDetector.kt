@@ -51,6 +51,7 @@ class ViolationDetector(private val enabled: Boolean) {
             description = description
         )
         violations.offer(violation)
+//        notifyVisualizer()    // show lên visualizer khi có violation nhưng tạm thời chưa cần
     }
     
     fun getViolations(): List<Violation> = violations.toList()
