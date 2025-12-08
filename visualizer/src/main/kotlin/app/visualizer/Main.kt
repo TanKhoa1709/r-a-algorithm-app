@@ -33,7 +33,6 @@ fun main() = application {
     // Kết nối tới cs-host
     LaunchedEffect(Unit) {
         client.connect("ws://localhost:8080/visualizer")
-        // nếu cs-host chạy port khác, sửa lại 8080 cho đúng
     }
 
     Window(
