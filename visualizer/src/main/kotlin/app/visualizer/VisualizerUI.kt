@@ -18,7 +18,9 @@ import androidx.compose.ui.unit.dp
 fun VisualizerScreen(state: VisualizerState) {
     MaterialTheme {
         Surface(
-            modifier = Modifier.fillMaxSize().padding(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -26,55 +28,36 @@ fun VisualizerScreen(state: VisualizerState) {
             ) {
                 // Cột trái: topology + queue
                 Column(
-                    modifier = Modifier.weight(2f).fillMaxHeight(),
+                    modifier = Modifier
+                        .weight(2f)
+                        .fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    TopologyView(state, modifier = Modifier.weight(1f))
-                    QueueView(state, modifier = Modifier)
+                    TopologyView(
+                        state = state,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QueueView(
+                        state = state,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 // Cột phải: log + metrics
                 Column(
-                    modifier = Modifier.weight(3f).fillMaxHeight(),
+                    modifier = Modifier
+                        .weight(3f)
+                        .fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    LogPanel(state, modifier = Modifier.weight(1f))
-                    MetricsPanel(state.metrics, modifier = Modifier)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TopologyView(state: VisualizerState, modifier: Modifier = Modifier) {
-    Card(
-        elevation = 4.dp,
-        modifier = Modifier.fillMaxWidth().fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                "Topology & CS State",
-                style = MaterialTheme.typography.h6,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                "Current CS holder: ${state.currentCsHolder ?: "None"}",
-                style = MaterialTheme.typography.body1
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // List các node
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                items(state.nodes) { node ->
-                    NodeCard(node, isHolder = node.id == state.currentCsHolder)
+                    LogPanel(
+                        state = state,
+                        modifier = Modifier.weight(1f)
+                    )
+                    MetricsPanel(
+                        metrics = state.metrics,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -129,13 +112,57 @@ private fun NodeCard(node: NodeInfo, isHolder: Boolean) {
 }
 
 @Composable
-private fun QueueView(state: VisualizerState, modifier: Modifier.Companion) {
+private fun TopologyView(
+    state: VisualizerState,
+    modifier: Modifier = Modifier
+) {
     Card(
         elevation = 4.dp,
-        modifier = modifier.fillMaxWidth().heightIn(min = 120.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = modifier.fillMaxSize().padding(12.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                "Topology & CS State",
+                style = MaterialTheme.typography.h6,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                "Current CS holder: ${state.currentCsHolder ?: "None"}",
+                style = MaterialTheme.typography.body1
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(state.nodes) { node ->
+                    NodeCard(node, isHolder = node.id == state.currentCsHolder)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QueueView(
+    state: VisualizerState,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        elevation = 4.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
@@ -160,13 +187,18 @@ private fun QueueView(state: VisualizerState, modifier: Modifier.Companion) {
 }
 
 @Composable
-private fun LogPanel(state: VisualizerState, modifier: Modifier = Modifier) {
+private fun LogPanel(
+    state: VisualizerState,
+    modifier: Modifier = Modifier
+) {
     Card(
         elevation = 4.dp,
-        modifier = Modifier.fillMaxWidth().fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp)
         ) {
             Text(
                 "Event Log",
@@ -189,13 +221,18 @@ private fun LogPanel(state: VisualizerState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MetricsPanel(metrics: Metrics, modifier: Modifier = Modifier) {
+private fun MetricsPanel(
+    metrics: Metrics,
+    modifier: Modifier = Modifier
+) {
     Card(
         elevation = 4.dp,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
