@@ -1,9 +1,11 @@
 package app.node.controller
 
 import app.core.RicartAgrawala
+import app.models.CSState
 import app.models.NodeConfig
 import app.net.websocket.ConnectionManager
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Controller for node business logic
@@ -11,10 +13,13 @@ import kotlinx.coroutines.runBlocking
 class NodeController(
     private val ricartAgrawala: RicartAgrawala,
     private val connectionManager: ConnectionManager,
+    private val csInteractionController: CSInteractionController,
     private val config: NodeConfig
 ) {
     private var currentRequestId: String? = null
     private var inCriticalSection = false
+    private val connectedNodes = ConcurrentHashMap.newKeySet<String>()
+    @Volatile private var csHostState: CSState? = null
     
     /**
      * Request to enter critical section
@@ -24,6 +29,15 @@ class NodeController(
             throw IllegalStateException("Already in critical section")
         }
         currentRequestId = ricartAgrawala.requestCriticalSection()
+        // Ask CS Host immediately; if denied, abort the request
+        val granted = runBlocking {
+            csInteractionController.requestAccess(config.nodeId, currentRequestId!!)
+        }
+        if (!granted) {
+            ricartAgrawala.releaseCriticalSection()
+            currentRequestId = null
+            throw IllegalStateException("CS Host denied access")
+        }
         return currentRequestId!!
     }
     
@@ -33,6 +47,10 @@ class NodeController(
     fun releaseCriticalSection() {
         if (!inCriticalSection || currentRequestId == null) {
             throw IllegalStateException("Not in critical section")
+        }
+        // Release CS host first, then notify peers
+        runBlocking {
+            csInteractionController.releaseAccess(config.nodeId, currentRequestId!!)
         }
         ricartAgrawala.releaseCriticalSection()
         currentRequestId = null
@@ -56,12 +74,16 @@ class NodeController(
     /**
      * Get connected nodes
      */
-    fun getConnectedNodes(): Set<String> {
-        // This would need to be tracked separately
-        return emptySet()
+    fun getConnectedNodes(): Set<String> = connectedNodes
+
+    fun updateCsHostState(state: CSState) {
+        csHostState = state
     }
+
+    fun getCsHostState(): CSState? = csHostState
     
     fun onEnterCriticalSection() {
+        // At this point CS Host already granted in requestCriticalSection
         inCriticalSection = true
     }
     
@@ -70,11 +92,11 @@ class NodeController(
     }
     
     fun onNodeDiscovered(nodeConfig: NodeConfig) {
-        // Handle node discovery
+        connectedNodes.add(nodeConfig.nodeId)
     }
     
     fun onNodeLost(nodeId: String) {
-        // Handle node loss
+        connectedNodes.remove(nodeId)
     }
 }
 

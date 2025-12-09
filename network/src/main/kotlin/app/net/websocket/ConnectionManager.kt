@@ -30,7 +30,7 @@ class ConnectionManager(
             val session = client.webSocketSession(
                 host = nodeConfig.host,
                 port = nodeConfig.port,
-                path = "/ws"
+                path = "/ws?nodeId=${nodeConfig.nodeId}"
             )
             connections[nodeConfig.nodeId] = session
 

@@ -7,6 +7,8 @@ import app.net.discovery.ServiceDiscovery
 import app.net.discovery.DiscoveryConfig
 import app.net.websocket.ConnectionManager
 import app.net.websocket.WebSocketServer
+import app.node.controller.CSInteractionController
+import app.node.controller.MessageHandler
 import app.node.controller.NodeController
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.decodeFromString
@@ -22,11 +24,15 @@ class NodeApplication(private val config: NodeConfig) {
     private lateinit var webSocketServer: WebSocketServer
     private lateinit var nodeAnnouncer: NodeAnnouncer
     private lateinit var serviceDiscovery: ServiceDiscovery
+    private lateinit var csInteractionController: CSInteractionController
+    private var csHostWebSocketClient: CSHostWebSocketClient? = null
     private lateinit var controller: NodeController
+    private val messageHandler = MessageHandler()
     
     fun start() {
         val sharedConfig = config.sharedConfig
         
+        csInteractionController = CSInteractionController(sharedConfig.csHostUrl)
         // Initialize network components
         connectionManager = ConnectionManager { nodeId, message ->
             handleMessage(nodeId, message)
@@ -85,42 +91,41 @@ class NodeApplication(private val config: NodeConfig) {
         controller = NodeController(
             ricartAgrawala,
             connectionManager,
+            csInteractionController,
             sharedConfig
         )
+
+        // Start CS Host websocket subscription and seed initial state
+        csHostWebSocketClient = CSHostWebSocketClient(sharedConfig.csHostUrl,
+            onState = { state -> controller.updateCsHostState(state) },
+            onError = { ex -> println("CS Host WS error: ${ex.message}") }
+        ).also { it.start() }
+        runCatching {
+            val initial = runBlocking { csInteractionController.getState() }
+            controller.updateCsHostState(initial)
+        }
     }
     
     fun stop() {
         nodeAnnouncer.stop()
         serviceDiscovery.stop()
         webSocketServer.stop()
+        csInteractionController.close()
         runBlocking {
             connectionManager.close()
+            csHostWebSocketClient?.stop()
         }
     }
     
     fun getController(): NodeController = controller
     
     private fun handleMessage(nodeId: String, message: String) {
-        try {
-            val protocol = Json.decodeFromString<app.proto.CSProtocol>(message)
-            val ramessage = Json.decodeFromString<app.proto.RAMessage>(protocol.payload)
-            when (ramessage.type) {
-                app.proto.MsgType.REQUEST -> {
-                    ricartAgrawala.handleRequest(ramessage)
-                }
-                app.proto.MsgType.REPLY -> {
-                    ricartAgrawala.handleReply(ramessage)
-                }
-                app.proto.MsgType.RELEASE -> {
-                    ricartAgrawala.handleRelease(ramessage)
-                }
-                else -> {
-                    // Unknown message type
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        messageHandler.handleMessage(
+            message,
+            onRequest = { RAMessage -> ricartAgrawala.handleRequest(RAMessage) },
+            onReply = { RAMessage -> ricartAgrawala.handleReply(RAMessage) },
+            onRelease = { RAMessage -> ricartAgrawala.handleRelease(RAMessage) }
+        )
     }
     
     private fun broadcastMessage(message: String) {

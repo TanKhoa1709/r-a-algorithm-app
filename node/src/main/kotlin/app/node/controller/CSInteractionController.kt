@@ -24,7 +24,7 @@ class CSInteractionController(private val csHostUrl: String) {
 
     suspend fun getState(): CSState {
         val response = client.get("$csHostUrl/api/state")
-        return Json.decodeFromString(response.bodyAsText())
+        return Json.decodeFromString<CSState>(response.bodyAsText())
     }
 
     suspend fun requestAccess(nodeId: String, requestId: String): Boolean {
