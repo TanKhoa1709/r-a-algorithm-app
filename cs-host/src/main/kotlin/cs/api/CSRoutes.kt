@@ -56,6 +56,17 @@ fun Application.configureCSRoutes(csHost: CSHost) {
                 val result = resourceManager.accessResource(resourceId, payload.nodeId, payload.requestId)
                 call.respond(result)
             }
+
+            // Release resource (optional, symmetry with access)
+            post("/resources/{resourceId}/release") {
+                val resourceId = call.parameters["resourceId"] ?: return@post call.respond(
+                    mapOf("error" to "Missing resourceId")
+                )
+                val payload = call.receiveValidated<AccessRequest>() ?: return@post
+                val resourceManager = csHost.getResourceManager()
+                resourceManager.releaseResource(resourceId, payload.nodeId, payload.requestId)
+                call.respond(mapOf("success" to true))
+            }
         }
     }
 }

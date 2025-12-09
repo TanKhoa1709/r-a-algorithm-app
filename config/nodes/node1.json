@@ -1,5 +1,5 @@
 {
-  "nodeId": "Node 1",
+  "nodeId": "Node-1",
   "host": "localhost",
   "port": 8081,
   "csHostUrl": "http://localhost:8080",

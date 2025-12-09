@@ -9,7 +9,7 @@ import java.util.UUID
  */
 @Serializable
 data class NodeConfig(
-    val nodeId: String = UUID.randomUUID().toString(),
+    val nodeId: String,
     val host: String = InetAddress.getLocalHost().hostName,
     val port: Int = 8080,
     val csHostUrl: String = "http://127.0.0.1:8080",

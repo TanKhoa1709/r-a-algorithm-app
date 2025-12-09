@@ -7,6 +7,7 @@ import app.models.VisualizerMetricsDto
 import app.models.VisualizerNodeDto
 import app.models.VisualizerSnapshot
 import cs.monitor.AccessMonitor
+import cs.monitor.NodeBroadcaster
 import cs.monitor.ViolationDetector
 import cs.monitor.VisualizerBroadcaster
 import cs.resources.ResourceManager
@@ -58,6 +59,7 @@ class CSHost(
             }
         }
 
+        notifyNodes()
         notifyVisualizer()
         return granted
     }
@@ -109,6 +111,7 @@ class CSHost(
                 }
             }
         }
+        notifyNodes()
         notifyVisualizer()
     }
 
@@ -181,6 +184,16 @@ class CSHost(
             accessHistory = history,
             metrics = metricsDto
         )
+    }
+
+    /**
+     * Push CSState updates to all connected nodes via WebSocket
+     */
+    private fun notifyNodes() {
+        val state = getState()
+        scope.launch {
+            NodeBroadcaster.broadcast(state)
+        }
     }
 
     /**

@@ -1,6 +1,7 @@
 package cs.api
 
 import cs.CSHost
+import cs.monitor.NodeBroadcaster
 import cs.monitor.VisualizerBroadcaster
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
@@ -17,12 +18,14 @@ import kotlinx.serialization.json.Json
 fun Application.configureWebSocketHandler(csHost: CSHost) {
     routing {
         webSocket("/ws/cs-host") {
-            // Send initial state
-            val state = csHost.getState()
-            send(Frame.Text(Json.encodeToString(state)))
-
-            // Handle incoming messages
+            // Register session for real-time updates
+            NodeBroadcaster.register(this)
             try {
+                // Send initial state
+                val state = csHost.getState()
+                send(Frame.Text(Json.encodeToString(state)))
+
+                // Handle incoming messages (keep connection alive)
                 for (frame in incoming) {
                     if (frame is Frame.Text) {
                         val message = frame.readText()
@@ -31,6 +34,8 @@ fun Application.configureWebSocketHandler(csHost: CSHost) {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
+                NodeBroadcaster.unregister(this)
             }
         }
         webSocket("/visualizer") {

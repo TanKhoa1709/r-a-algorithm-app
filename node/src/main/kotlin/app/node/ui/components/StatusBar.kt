@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 fun StatusBar(
     inCriticalSection: Boolean,
     clock: Long,
+    csState: app.models.CSState?,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -58,6 +59,39 @@ fun StatusBar(
                     text = clock.toString(),
                     style = MaterialTheme.typography.body1
                 )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            csState?.let { state ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Host Locked:")
+                    Text(
+                        text = if (state.isLocked) "YES (${state.currentHolder ?: "?"})" else "NO",
+                        style = MaterialTheme.typography.body1
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Queue: ${if (state.queue.isEmpty()) "[]" else state.queue.joinToString(", ")}",
+                    style = MaterialTheme.typography.body2
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Total accesses: ${state.totalAccesses}",
+                    style = MaterialTheme.typography.body2
+                )
+                if (state.violations.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Violations: ${state.violations.size}",
+                        color = Color(0xFFD32F2F),
+                        style = MaterialTheme.typography.body2
+                    )
+                }
             }
         }
     }

@@ -7,6 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.node.controller.NodeController
 import app.node.ui.components.*
+import app.models.CSState
+import kotlinx.coroutines.launch
 
 /**
  * Main UI for the node application
@@ -15,11 +17,18 @@ import app.node.ui.components.*
 fun NodeUI(controller: NodeController) {
     var inCS by remember { mutableStateOf(false) }
     var clock by remember { mutableStateOf(0L) }
+    var csState by remember { mutableStateOf<CSState?>(null) }
+    val scope = rememberCoroutineScope()
     
     LaunchedEffect(Unit) {
+        // Seed state via HTTP API once
+        scope.launch {
+            runCatching { controller.refreshCsHostState() }
+        }
         while (true) {
             clock = controller.getClock()
             inCS = controller.isInCriticalSection()
+            csState = controller.getCsHostState()
             kotlinx.coroutines.delay(100)
         }
     }
@@ -42,6 +51,7 @@ fun NodeUI(controller: NodeController) {
             StatusBar(
                 inCriticalSection = inCS,
                 clock = clock,
+                csState = csState,
                 modifier = Modifier.weight(1f)
             )
         }

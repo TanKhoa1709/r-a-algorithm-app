@@ -43,6 +43,20 @@ class CSInteractionController(private val csHostUrl: String) {
         }
     }
 
+    suspend fun accessResource(resourceId: String, nodeId: String, requestId: String) {
+        client.post("$csHostUrl/api/resources/$resourceId/access") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("nodeId" to nodeId, "requestId" to requestId))
+        }
+    }
+
+    suspend fun releaseResource(resourceId: String, nodeId: String, requestId: String) {
+        client.post("$csHostUrl/api/resources/$resourceId/release") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("nodeId" to nodeId, "requestId" to requestId))
+        }
+    }
+
     fun close() {
         client.close()
     }

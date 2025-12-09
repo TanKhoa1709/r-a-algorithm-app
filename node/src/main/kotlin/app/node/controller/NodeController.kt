@@ -38,6 +38,10 @@ class NodeController(
             currentRequestId = null
             throw IllegalStateException("CS Host denied access")
         }
+        // Access default resource as part of CS entry coordination
+        runBlocking {
+            csInteractionController.accessResource("counter", config.nodeId, currentRequestId!!)
+        }
         return currentRequestId!!
     }
     
@@ -50,6 +54,7 @@ class NodeController(
         }
         // Release CS host first, then notify peers
         runBlocking {
+            csInteractionController.releaseResource("counter", config.nodeId, currentRequestId!!)
             csInteractionController.releaseAccess(config.nodeId, currentRequestId!!)
         }
         ricartAgrawala.releaseCriticalSection()
@@ -81,6 +86,14 @@ class NodeController(
     }
 
     fun getCsHostState(): CSState? = csHostState
+    
+    suspend fun refreshCsHostState() {
+        runCatching {
+            csInteractionController.getState()
+        }.onSuccess { state ->
+            csHostState = state
+        }
+    }
     
     fun onEnterCriticalSection() {
         // At this point CS Host already granted in requestCriticalSection
