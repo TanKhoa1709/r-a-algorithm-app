@@ -237,7 +237,14 @@ private fun TopologyView(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = VisualizerColors.CardShadow,
+                spotColor = VisualizerColors.CardShadow
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, VisualizerColors.CardBorder, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         elevation = 0.dp,
         backgroundColor = VisualizerColors.CardBackground
@@ -310,7 +317,14 @@ private fun QueueView(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = VisualizerColors.CardShadow,
+                spotColor = VisualizerColors.CardShadow
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, VisualizerColors.CardBorder, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         elevation = 0.dp,
         backgroundColor = VisualizerColors.CardBackground
@@ -422,7 +436,14 @@ private fun LogPanel(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = VisualizerColors.CardShadow,
+                spotColor = VisualizerColors.CardShadow
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, VisualizerColors.CardBorder, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         elevation = 0.dp,
         backgroundColor = VisualizerColors.CardBackground
@@ -480,7 +501,14 @@ private fun MetricsPanel(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = VisualizerColors.CardShadow,
+                spotColor = VisualizerColors.CardShadow
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, VisualizerColors.CardBorder, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         elevation = 0.dp,
         backgroundColor = VisualizerColors.CardBackground

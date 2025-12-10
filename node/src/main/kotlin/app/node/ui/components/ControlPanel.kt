@@ -1,5 +1,6 @@
 package app.node.ui.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -8,6 +9,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,7 +25,14 @@ fun ControlPanel(
 ) {
     Card(
         modifier = modifier
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = NodeColors.CardShadow,
+                spotColor = NodeColors.CardShadow
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, NodeColors.CardBorder, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         elevation = 0.dp,
         backgroundColor = NodeColors.CardBackground

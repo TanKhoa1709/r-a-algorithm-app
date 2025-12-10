@@ -28,7 +28,14 @@ fun StatusBar(
 ) {
     Card(
         modifier = modifier
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = NodeColors.CardShadow,
+                spotColor = NodeColors.CardShadow
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, NodeColors.CardBorder, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         elevation = 0.dp,
         backgroundColor = NodeColors.CardBackground
@@ -36,11 +43,6 @@ fun StatusBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = if (inCriticalSection) NodeColors.InCSText.copy(alpha = 0.3f) else NodeColors.CardBorder,
-                    shape = RoundedCornerShape(16.dp)
-                )
                 .background(
                     if (inCriticalSection) NodeColors.InCS.copy(alpha = 0.3f) else NodeColors.CardBackground,
                     RoundedCornerShape(16.dp)
