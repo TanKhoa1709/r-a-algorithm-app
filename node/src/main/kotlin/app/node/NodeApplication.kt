@@ -47,13 +47,16 @@ class NodeApplication(private val config: NodeConfig) {
         ricartAgrawala = RicartAgrawala(
             nodeId = sharedConfig.nodeId,
             onSendRequest = { message ->
-                broadcastMessage(Json.encodeToString(message))
+                val protocol = app.proto.CSProtocol.fromMessage(message)
+                broadcastMessage(Json.encodeToString(protocol))
             },
             onSendReply = { message ->
-                sendToNode(message.nodeId, Json.encodeToString(message))
+                val protocol = app.proto.CSProtocol.fromMessage(message)
+                sendToNode(message.nodeId, Json.encodeToString(protocol))
             },
             onSendRelease = { message ->
-                broadcastMessage(Json.encodeToString(message))
+                val protocol = app.proto.CSProtocol.fromMessage(message)
+                broadcastMessage(Json.encodeToString(protocol))
             },
             onEnterCS = {
                 controller.onEnterCriticalSection()

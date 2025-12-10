@@ -1,8 +1,9 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package app.node.controller
 
 import app.proto.CSProtocol
 import app.proto.MsgType
-import app.proto.RAMessage
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -15,9 +16,7 @@ class MessageHandler {
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
-        coerceInputValues = true
     }
-    @OptIn(ExperimentalSerializationApi::class)
     fun handleMessage(
         message: String,
         onRequest: (app.proto.RAMessage) -> Unit,
@@ -25,13 +24,8 @@ class MessageHandler {
         onRelease: (app.proto.RAMessage) -> Unit
     ) {
         try {
-            val ramessage: RAMessage = runCatching {
-                val protocol = json.decodeFromString<CSProtocol>(message)
-                json.decodeFromString(protocol.payload)
-            }.getOrElse {
-                // Fallback: message is already a RAMessage
-                json.decodeFromString(message)
-            }
+            val protocol = json.decodeFromString<CSProtocol>(message)
+            val ramessage = json.decodeFromString<app.proto.RAMessage>(protocol.payload)
             when (ramessage.type) {
                 MsgType.REQUEST -> {
                     onRequest(ramessage)
