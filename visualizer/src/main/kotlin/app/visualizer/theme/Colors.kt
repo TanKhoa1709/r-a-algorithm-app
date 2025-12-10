@@ -1,8 +1,8 @@
-package app.node.ui.theme
+package app.visualizer.theme
 
 import androidx.compose.ui.graphics.Color
 
-object NodeColors {
+object VisualizerColors {
     // Primary palette - Modern indigo/violet
     val Primary = Color(0xFF6366F1)
     val PrimaryLight = Color(0xFF818CF8)
@@ -21,13 +21,13 @@ object NodeColors {
     val Error = Color(0xFFEF4444)
     val ErrorLight = Color(0xFFFEE2E2)
     
-    // Critical Section states
-    val InCS = Color(0xFFDDD6FE)       // Light violet background when in CS
-    val InCSText = Color(0xFF7C3AED)   // Purple text for "IN CS" status
-    val Idle = Color(0xFFD1FAE5)       // Light green background when idle
-    val IdleText = Color(0xFF059669)   // Green text for "IDLE" status
-    val Wanted = Color(0xFFFEF3C7)     // Light amber when waiting
-    val WantedText = Color(0xFFD97706) // Amber text for waiting
+    // Node states
+    val IdleState = Color(0xFFD1FAE5)
+    val IdleStateText = Color(0xFF059669)
+    val WantedState = Color(0xFFFEF3C7)
+    val WantedStateText = Color(0xFFD97706)
+    val HeldState = Color(0xFFDDD6FE)
+    val HeldStateText = Color(0xFF7C3AED)
     
     // Surface colors - Clean modern light theme
     val Background = Color(0xFFF8FAFC)
@@ -44,9 +44,4 @@ object NodeColors {
     // Divider and borders
     val Divider = Color(0xFFE2E8F0)
     val Border = Color(0xFFCBD5E1)
-    
-    // Connected peer indicator
-    val Connected = Color(0xFF10B981)
-    val Disconnected = Color(0xFF94A3B8)
 }
-

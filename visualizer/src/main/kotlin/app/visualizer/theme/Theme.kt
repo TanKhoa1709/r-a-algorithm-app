@@ -1,4 +1,4 @@
-package app.node.ui.theme
+package app.visualizer.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.MaterialTheme
@@ -13,62 +13,62 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val LightColorPalette = lightColors(
-    primary = NodeColors.Primary,
-    primaryVariant = NodeColors.PrimaryDark,
-    secondary = NodeColors.Secondary,
-    secondaryVariant = NodeColors.SecondaryDark,
-    error = NodeColors.Error,
-    background = NodeColors.Background,
-    surface = NodeColors.Surface,
+    primary = VisualizerColors.Primary,
+    primaryVariant = VisualizerColors.PrimaryDark,
+    secondary = VisualizerColors.Secondary,
+    secondaryVariant = VisualizerColors.SecondaryDark,
+    error = VisualizerColors.Error,
+    background = VisualizerColors.Background,
+    surface = VisualizerColors.Surface,
     onPrimary = androidx.compose.ui.graphics.Color.White,
     onSecondary = androidx.compose.ui.graphics.Color.White,
     onError = androidx.compose.ui.graphics.Color.White,
-    onBackground = NodeColors.TextPrimary,
-    onSurface = NodeColors.TextPrimary
+    onBackground = VisualizerColors.TextPrimary,
+    onSurface = VisualizerColors.TextPrimary
 )
 
-private val NodeTypography = Typography(
+private val VisualizerTypography = Typography(
     h4 = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         letterSpacing = 0.sp,
-        color = NodeColors.TextPrimary
+        color = VisualizerColors.TextPrimary
     ),
     h5 = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
         letterSpacing = 0.sp,
-        color = NodeColors.TextPrimary
+        color = VisualizerColors.TextPrimary
     ),
     h6 = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
         letterSpacing = 0.15.sp,
-        color = NodeColors.TextPrimary
+        color = VisualizerColors.TextPrimary
     ),
     subtitle1 = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         letterSpacing = 0.15.sp,
-        color = NodeColors.TextPrimary
+        color = VisualizerColors.TextPrimary
     ),
     body1 = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         letterSpacing = 0.25.sp,
-        color = NodeColors.TextPrimary
+        color = VisualizerColors.TextPrimary
     ),
     body2 = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 13.sp,
         letterSpacing = 0.25.sp,
-        color = NodeColors.TextSecondary
+        color = VisualizerColors.TextSecondary
     ),
     button = TextStyle(
         fontFamily = FontFamily.Default,
@@ -81,22 +81,22 @@ private val NodeTypography = Typography(
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         letterSpacing = 0.4.sp,
-        color = NodeColors.TextMuted
+        color = VisualizerColors.TextMuted
     )
 )
 
-private val NodeShapes = Shapes(
+private val VisualizerShapes = Shapes(
     small = RoundedCornerShape(8.dp),
     medium = RoundedCornerShape(12.dp),
     large = RoundedCornerShape(16.dp)
 )
 
 @Composable
-fun NodeTheme(content: @Composable () -> Unit) {
+fun VisualizerTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colors = LightColorPalette,
-        typography = NodeTypography,
-        shapes = NodeShapes,
+        typography = VisualizerTypography,
+        shapes = VisualizerShapes,
         content = content
     )
 }

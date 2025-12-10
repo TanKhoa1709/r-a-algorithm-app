@@ -1,12 +1,15 @@
 package app.node.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.node.controller.NodeController
 import app.node.ui.components.*
+import app.node.ui.theme.NodeColors
 import app.models.CSState
 import kotlinx.coroutines.launch
 
@@ -36,17 +39,21 @@ fun NodeUI(controller: NodeController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .background(NodeColors.Background)
+            .padding(24.dp)
     ) {
+        // Modern title with styling
         Text(
             text = "Ricart-Agrawala Node",
             style = MaterialTheme.typography.h4,
-            modifier = Modifier.padding(bottom = 16.dp)
+            fontWeight = FontWeight.Bold,
+            color = NodeColors.TextPrimary,
+            modifier = Modifier.padding(bottom = 24.dp)
         )
         
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             StatusBar(
                 inCriticalSection = inCS,
@@ -56,7 +63,7 @@ fun NodeUI(controller: NodeController) {
             )
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         
         ControlPanel(
             onRequestCS = {
@@ -80,11 +87,11 @@ fun NodeUI(controller: NodeController) {
             modifier = Modifier.fillMaxWidth()
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         
         Row(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             LogPanel(
                 modifier = Modifier.weight(1f)
@@ -96,4 +103,3 @@ fun NodeUI(controller: NodeController) {
         }
     }
 }
-
