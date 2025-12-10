@@ -2,11 +2,16 @@ package app.node.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.node.controller.NodeController
 import app.node.ui.components.*
 import app.node.ui.theme.NodeColors
@@ -36,70 +41,116 @@ fun NodeUI(controller: NodeController) {
         }
     }
     
-    Column(
+    // Main container with gradient background
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NodeColors.Background)
-            .padding(24.dp)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        NodeColors.Background,
+                        NodeColors.BackgroundGradientStart,
+                        NodeColors.BackgroundGradientEnd
+                    )
+                )
+            )
     ) {
-        // Modern title with styling
-        Text(
-            text = "Ricart-Agrawala Node",
-            style = MaterialTheme.typography.h4,
-            fontWeight = FontWeight.Bold,
-            color = NodeColors.TextPrimary,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-        
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(28.dp)
         ) {
-            StatusBar(
-                inCriticalSection = inCS,
-                clock = clock,
-                csState = csState,
-                modifier = Modifier.weight(1f)
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(20.dp))
-        
-        ControlPanel(
-            onRequestCS = {
-                try {
-                    controller.requestCriticalSection()
-                    inCS = true
-                } catch (e: Exception) {
-                    // Handle error
+            // Premium header with accent bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Decorative accent bar
+                Box(
+                    modifier = Modifier
+                        .width(6.dp)
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    NodeColors.PrimaryGradientStart,
+                                    NodeColors.PrimaryGradientEnd
+                                )
+                            )
+                        )
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Ricart-Agrawala Node",
+                        style = MaterialTheme.typography.h4.copy(
+                            fontSize = 26.sp,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        fontWeight = FontWeight.Bold,
+                        color = NodeColors.TextPrimary
+                    )
+                    Text(
+                        text = "Distributed Mutual Exclusion",
+                        style = MaterialTheme.typography.caption,
+                        color = NodeColors.TextMuted
+                    )
                 }
-            },
-            onReleaseCS = {
-                try {
-                    controller.releaseCriticalSection()
-                    inCS = false
-                } catch (e: Exception) {
-                    // Handle error
-                }
-            },
-            enabled = !inCS,
-            releaseEnabled = inCS,
-            modifier = Modifier.fillMaxWidth()
-        )
-        
-        Spacer(modifier = Modifier.height(20.dp))
-        
-        Row(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            LogPanel(
-                modifier = Modifier.weight(1f)
+            }
+            
+            Spacer(modifier = Modifier.height(28.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                StatusBar(
+                    inCriticalSection = inCS,
+                    clock = clock,
+                    csState = csState,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            ControlPanel(
+                onRequestCS = {
+                    try {
+                        controller.requestCriticalSection()
+                        inCS = true
+                    } catch (e: Exception) {
+                        // Handle error
+                    }
+                },
+                onReleaseCS = {
+                    try {
+                        controller.releaseCriticalSection()
+                        inCS = false
+                    } catch (e: Exception) {
+                        // Handle error
+                    }
+                },
+                enabled = !inCS,
+                releaseEnabled = inCS,
+                modifier = Modifier.fillMaxWidth()
             )
-            PeersList(
-                peers = controller.getConnectedNodes(),
-                modifier = Modifier.weight(1f)
-            )
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                LogPanel(
+                    modifier = Modifier.weight(1f)
+                )
+                PeersList(
+                    peers = controller.getConnectedNodes(),
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }

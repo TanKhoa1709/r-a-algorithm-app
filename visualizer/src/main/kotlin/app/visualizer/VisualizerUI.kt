@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,49 +33,103 @@ import app.visualizer.theme.VisualizerTheme
 @Composable
 fun VisualizerScreen(state: VisualizerState) {
     VisualizerTheme {
-        Surface(
+        // Main container with gradient background
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(VisualizerColors.Background)
-                .padding(24.dp),
-            color = VisualizerColors.Background
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            VisualizerColors.Background,
+                            VisualizerColors.BackgroundGradientStart,
+                            VisualizerColors.BackgroundGradientEnd
+                        )
+                    )
+                )
         ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(28.dp)
             ) {
-                // Cột trái: topology + queue
-                Column(
-                    modifier = Modifier
-                        .weight(2f)
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                // Premium header with accent bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TopologyView(
-                        state = state,
-                        modifier = Modifier.weight(1f)
+                    // Decorative accent bar
+                    Box(
+                        modifier = Modifier
+                            .width(6.dp)
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        VisualizerColors.PrimaryGradientStart,
+                                        VisualizerColors.PrimaryGradientEnd
+                                    )
+                                )
+                            )
                     )
-                    QueueView(
-                        state = state,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = "R&A CS Visualizer",
+                            style = MaterialTheme.typography.h4.copy(
+                                fontSize = 26.sp,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            fontWeight = FontWeight.Bold,
+                            color = VisualizerColors.TextPrimary
+                        )
+                        Text(
+                            text = "Real-time Critical Section Monitoring",
+                            style = MaterialTheme.typography.caption,
+                            color = VisualizerColors.TextMuted
+                        )
+                    }
                 }
 
-                // Cột phải: log + metrics
-                Column(
-                    modifier = Modifier
-                        .weight(3f)
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    LogPanel(
-                        state = state,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricsPanel(
-                        metrics = state.metrics,
-                        modifier = Modifier.weight(1f)
-                    )
+                    // Cột trái: topology + queue
+                    Column(
+                        modifier = Modifier
+                            .weight(2f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        TopologyView(
+                            state = state,
+                            modifier = Modifier.weight(1f)
+                        )
+                        QueueView(
+                            state = state,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // Cột phải: log + metrics
+                    Column(
+                        modifier = Modifier
+                            .weight(3f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        LogPanel(
+                            state = state,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MetricsPanel(
+                            metrics = state.metrics,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
