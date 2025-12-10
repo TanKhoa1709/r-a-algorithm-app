@@ -15,21 +15,20 @@ class BankAccountResource(
     private var lastAccessTime: Long? = null
     
     override suspend fun access(nodeId: String, requestId: String): ResourceAccessResult {
-        val currentBalance = balance.get()
         accessCount.incrementAndGet()
         lastAccessTime = System.currentTimeMillis()
         
         // Simulate transaction
         val amount = 100L
         val newBalance = balance.addAndGet(amount)
-        
+        val data: Map<String, String> = mapOf(
+            "balance" to newBalance.toString(),
+            "transaction" to amount.toString()
+        )
         return ResourceAccessResult(
             success = true,
             message = "Deposited $amount, new balance: $newBalance",
-            data = mapOf(
-                "balance" to newBalance,
-                "transaction" to amount
-            )
+            data = data
         )
     }
     
@@ -38,12 +37,13 @@ class BankAccountResource(
     }
     
     override fun getState(): ResourceState {
+        val metadata: Map<String, String> = mapOf("balance" to balance.get().toString())
         return ResourceState(
             resourceId = resourceId,
             currentUser = null,
             accessCount = accessCount.get(),
             lastAccessTime = lastAccessTime,
-            metadata = mapOf("balance" to balance.get())
+            metadata = metadata
         )
     }
     

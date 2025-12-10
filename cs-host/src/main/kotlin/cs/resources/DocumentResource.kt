@@ -26,7 +26,7 @@ class DocumentResource(
             success = true,
             message = "Document edited",
             data = mapOf(
-                "contentLength" to content.length,
+                "contentLength" to content.length.toString(),
                 "edit" to edit.trim()
             )
         )
@@ -45,8 +45,8 @@ class DocumentResource(
             accessCount = accessCount.get(),
             lastAccessTime = lastAccessTime,
             metadata = mapOf(
-                "contentLength" to content.length,
-                "lineCount" to content.lines().size
+                "contentLength" to content.length.toString(),
+                "lineCount" to content.lines().size.toString()
             )
         )
     }

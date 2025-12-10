@@ -21,7 +21,7 @@ class SharedCounterResource(
         return ResourceAccessResult(
             success = true,
             message = "Counter incremented to $value",
-            data = mapOf("counter" to value)
+            data = mapOf("counter" to value.toString())
         )
     }
     
@@ -35,7 +35,7 @@ class SharedCounterResource(
             currentUser = null,
             accessCount = accessCount.get(),
             lastAccessTime = lastAccessTime,
-            metadata = mapOf("counter" to counter.get())
+            metadata = mapOf("counter" to counter.get().toString())
         )
     }
     

@@ -28,7 +28,7 @@ class PrinterResource(
             message = "Print job queued: $jobId",
             data = mapOf(
                 "jobId" to jobId,
-                "queueSize" to printQueue.size
+                "queueSize" to printQueue.size.toString()
             )
         )
     }
@@ -50,8 +50,8 @@ class PrinterResource(
             accessCount = accessCount.get(),
             lastAccessTime = lastAccessTime,
             metadata = mapOf(
-                "queueSize" to printQueue.size,
-                "queue" to printQueue.toList()
+                "queueSize" to printQueue.size.toString(),
+                "queue" to printQueue.joinToString(",")
             )
         )
     }
