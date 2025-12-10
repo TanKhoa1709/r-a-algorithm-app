@@ -24,8 +24,10 @@ subprojects {
         
         // Testing
         val testImplementation by configurations
+        val testRuntimeOnly by configurations
         testImplementation(kotlin("test"))
         testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
+        testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
     }
     
     tasks.withType<Test> {
