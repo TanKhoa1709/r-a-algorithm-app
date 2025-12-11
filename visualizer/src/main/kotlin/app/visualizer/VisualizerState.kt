@@ -21,10 +21,19 @@ data class Metrics(
     val violationCount: Int = 0
 )
 
+data class LogEntry(
+    val nodeId: String,
+    val requestId: String,
+    val timestamp: Long,
+    val entryTime: Long,
+    val exitTime: Long? = null,
+    val duration: Long? = null
+)
+
 data class VisualizerState(
     val nodes: List<NodeInfo> = emptyList(),
     val currentCsHolder: String? = null,
     val queue: List<String> = emptyList(),
-    val logLines: List<String> = emptyList(),
+    val logEntries: List<LogEntry> = emptyList(),
     val metrics: Metrics = Metrics()
 )
