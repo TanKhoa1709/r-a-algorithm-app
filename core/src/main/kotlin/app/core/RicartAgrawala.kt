@@ -10,7 +10,8 @@ import java.util.UUID
 class RicartAgrawala(
     private val nodeId: String,
     private val onSendRequest: (RAMessage) -> Unit,
-    private val onSendReply: (RAMessage) -> Unit,
+    // Second parameter is the destination node that should receive the reply
+    private val onSendReply: (RAMessage, String) -> Unit,
     private val onSendRelease: (RAMessage) -> Unit,
     private val onEnterCS: () -> Unit,
     private val onExitCS: () -> Unit
@@ -99,7 +100,8 @@ class RicartAgrawala(
                 nodeId = nodeId,
                 requestId = request.requestId
             )
-            onSendReply(reply)
+            // Send reply directly to the requester
+            onSendReply(reply, request.nodeId)
         } else {
             // Defer reply
             state.addPendingRequest(request)
@@ -157,7 +159,7 @@ class RicartAgrawala(
                 nodeId = nodeId,
                 requestId = request.requestId
             )
-            onSendReply(reply)
+            onSendReply(reply, request.nodeId)
         }
         
         // Reset state

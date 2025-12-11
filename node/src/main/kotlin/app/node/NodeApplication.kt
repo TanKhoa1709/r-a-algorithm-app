@@ -34,12 +34,12 @@ class NodeApplication(private val config: NodeConfig) {
         
         csInteractionController = CSInteractionController(sharedConfig.csHostUrl)
         // Initialize network components
-        connectionManager = ConnectionManager { nodeId, message ->
-            handleMessage(nodeId, message)
+        connectionManager = ConnectionManager { _, message ->
+            handleMessage(message)
         }
         
-        webSocketServer = WebSocketServer(sharedConfig.port) { nodeId, message ->
-            handleMessage(nodeId, message)
+        webSocketServer = WebSocketServer(sharedConfig.port) { _, message ->
+            handleMessage(message)
         }
         webSocketServer.start()
         
@@ -50,9 +50,10 @@ class NodeApplication(private val config: NodeConfig) {
                 val protocol = app.proto.CSProtocol.fromMessage(message)
                 broadcastMessage(Json.encodeToString(protocol))
             },
-            onSendReply = { message ->
+            onSendReply = { message, targetNodeId ->
                 val protocol = app.proto.CSProtocol.fromMessage(message)
-                sendToNode(message.nodeId, Json.encodeToString(protocol))
+                // Send reply to the original requester (targetNodeId), not the sender
+                sendToNode(targetNodeId, Json.encodeToString(protocol))
             },
             onSendRelease = { message ->
                 val protocol = app.proto.CSProtocol.fromMessage(message)
@@ -122,7 +123,7 @@ class NodeApplication(private val config: NodeConfig) {
     
     fun getController(): NodeController = controller
     
-    private fun handleMessage(nodeId: String, message: String) {
+    private fun handleMessage(message: String) {
         messageHandler.handleMessage(
             message,
             onRequest = { RAMessage -> ricartAgrawala.handleRequest(RAMessage) },

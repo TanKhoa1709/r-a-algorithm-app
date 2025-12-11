@@ -28,7 +28,7 @@ class BankAccountResource(
         return ResourceAccessResult(
             success = true,
             message = "Deposited $amount, new balance: $newBalance",
-            data = data
+            data = data,
         )
     }
     

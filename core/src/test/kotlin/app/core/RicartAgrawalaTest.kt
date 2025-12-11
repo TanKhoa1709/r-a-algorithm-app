@@ -13,7 +13,7 @@ class RicartAgrawalaTest {
         val ra = RicartAgrawala(
             nodeId = "node1",
             onSendRequest = { requestSent = true },
-            onSendReply = {},
+            onSendReply = { _, _ -> },
             onSendRelease = {},
             onEnterCS = {},
             onExitCS = {}
@@ -33,7 +33,7 @@ class RicartAgrawalaTest {
         val ra = RicartAgrawala(
             nodeId = "node1",
             onSendRequest = {},
-            onSendReply = { replySent = true },
+            onSendReply = { _, _ -> replySent = true },
             onSendRelease = {},
             onEnterCS = {},
             onExitCS = {}
