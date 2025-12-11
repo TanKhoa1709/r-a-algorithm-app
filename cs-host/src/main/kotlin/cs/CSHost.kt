@@ -32,7 +32,9 @@ class CSHost(
     private val config: CSHostConfig,
     private val resourceManager: ResourceManager
 ) {
-    private val accessQueue = ConcurrentLinkedQueue<String>()
+    private data class AccessRequest(val nodeId: String, val requestId: String)
+
+    private val accessQueue = ConcurrentLinkedQueue<AccessRequest>()
     private val currentHolder: AtomicReference<String?> = AtomicReference(null)
     private val accessHistory = ConcurrentLinkedQueue<CSEntry>()
     private val totalAccesses = AtomicLong(0)
@@ -48,14 +50,17 @@ class CSHost(
      * Request access to critical section
      */
     suspend fun requestAccess(nodeId: String, requestId: String): Boolean {
-        val granted: Boolean
+        var granted = false
         accessMutex.withLock {
-            granted = if (currentHolder.get() == null && accessQueue.isEmpty()) {
+            // Nếu node đã giữ CS hoặc đã có trong hàng đợi, không nhận thêm request mới
+            if (currentHolder.get() == nodeId || accessQueue.any { it.nodeId == nodeId }) {
+                granted = false
+            } else if (currentHolder.get() == null && accessQueue.isEmpty()) {
                 grantAccess(nodeId, requestId)
-                true
+                granted = true
             } else {
-                accessQueue.offer(nodeId)
-                false
+                accessQueue.offer(AccessRequest(nodeId, requestId))
+                granted = false
             }
         }
 
@@ -67,7 +72,7 @@ class CSHost(
     /**
      * Grant access to critical section
      */
-    private suspend fun grantAccess(nodeId: String, requestId: String) {
+    private fun grantAccess(nodeId: String, requestId: String) {
         val entryTime = System.currentTimeMillis()
         currentHolder.set(nodeId)
         totalAccesses.incrementAndGet()
@@ -105,9 +110,9 @@ class CSHost(
                 }
 
                 // Grant access to next in queue
-                val nextNode = accessQueue.poll()
-                if (nextNode != null) {
-                    grantAccess(nextNode, "")
+                val nextRequest = accessQueue.poll()
+                if (nextRequest != null) {
+                    grantAccess(nextRequest.nodeId, nextRequest.requestId)
                 }
             }
         }
@@ -122,7 +127,7 @@ class CSHost(
         return CSState(
             isLocked = currentHolder.get() != null,
             currentHolder = currentHolder.get(),
-            queue = accessQueue.toList(),
+            queue = accessQueue.map { it.nodeId }.toList(),
             totalAccesses = totalAccesses.get(),
             violations = violations.toList()
         )

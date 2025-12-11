@@ -28,6 +28,8 @@ fun NodeUI(controller: NodeController) {
     var csState by remember { mutableStateOf<CSState?>(null) }
     val scope = rememberCoroutineScope()
     
+    var hasPendingRequest by remember { mutableStateOf(false) }
+    
     LaunchedEffect(Unit) {
         // Seed state via HTTP API once
         scope.launch {
@@ -36,6 +38,7 @@ fun NodeUI(controller: NodeController) {
         while (true) {
             clock = controller.getClock()
             inCS = controller.isInCriticalSection()
+            hasPendingRequest = controller.hasPendingRequest()
             csState = controller.getCsHostState()
             kotlinx.coroutines.delay(100)
         }
@@ -119,7 +122,7 @@ fun NodeUI(controller: NodeController) {
                 onRequestCS = {
                     try {
                         controller.requestCriticalSection()
-                        inCS = true
+                        // State will be updated by LaunchedEffect
                     } catch (e: Exception) {
                         // Handle error
                     }
@@ -127,12 +130,12 @@ fun NodeUI(controller: NodeController) {
                 onReleaseCS = {
                     try {
                         controller.releaseCriticalSection()
-                        inCS = false
+                        // State will be updated by LaunchedEffect
                     } catch (e: Exception) {
                         // Handle error
                     }
                 },
-                enabled = !inCS,
+                enabled = !inCS && !hasPendingRequest,
                 releaseEnabled = inCS,
                 modifier = Modifier.fillMaxWidth()
             )
