@@ -43,28 +43,66 @@ class NodeApplication(private val config: NodeConfig) {
         }
         webSocketServer.start()
         
-        // Initialize Ricart-Agrawala algorithm
+        // Initialize controller first with a temporary ricartAgrawala
+        // We'll replace it after creating the real one
+        val tempRicartAgrawala = RicartAgrawala(
+            nodeId = sharedConfig.nodeId,
+            onSendRequest = { },
+            onSendReply = { _, _ -> },
+            onSendRelease = { },
+            onEnterCS = { },
+            onExitCS = { }
+        )
+        controller = NodeController(
+            tempRicartAgrawala,
+            connectionManager,
+            csInteractionController,
+            sharedConfig
+        )
+        
+        // Now create the real ricartAgrawala with proper callbacks
         ricartAgrawala = RicartAgrawala(
             nodeId = sharedConfig.nodeId,
             onSendRequest = { message ->
+                if (::controller.isInitialized) {
+                    controller.logSendingRequest(message.requestId, message.timestamp)
+                }
                 val protocol = app.proto.CSProtocol.fromMessage(message)
                 broadcastMessage(Json.encodeToString(protocol))
             },
             onSendReply = { message, targetNodeId ->
+                if (::controller.isInitialized) {
+                    controller.logSendingReply(targetNodeId, message.requestId, message.timestamp)
+                }
                 val protocol = app.proto.CSProtocol.fromMessage(message)
                 // Send reply to the original requester (targetNodeId), not the sender
                 sendToNode(targetNodeId, Json.encodeToString(protocol))
             },
             onSendRelease = { message ->
+                if (::controller.isInitialized) {
+                    controller.logSendingRelease(message.requestId, message.timestamp)
+                }
                 val protocol = app.proto.CSProtocol.fromMessage(message)
                 broadcastMessage(Json.encodeToString(protocol))
             },
             onEnterCS = {
-                controller.onEnterCriticalSection()
+                if (::controller.isInitialized) {
+                    controller.onEnterCriticalSection()
+                }
             },
             onExitCS = {
-                controller.onExitCriticalSection()
+                if (::controller.isInitialized) {
+                    controller.onExitCriticalSection()
+                }
             }
+        )
+        
+        // Recreate controller with the real ricartAgrawala
+        controller = NodeController(
+            ricartAgrawala,
+            connectionManager,
+            csInteractionController,
+            sharedConfig
         )
         
         // Initialize service discovery
@@ -90,14 +128,6 @@ class NodeApplication(private val config: NodeConfig) {
             }
         )
         serviceDiscovery.start()
-        
-        // Initialize controller
-        controller = NodeController(
-            ricartAgrawala,
-            connectionManager,
-            csInteractionController,
-            sharedConfig
-        )
 
         // Start CS Host websocket subscription and seed initial state
         csHostWebSocketClient = CSHostWebSocketClient(sharedConfig.csHostUrl,
@@ -126,9 +156,18 @@ class NodeApplication(private val config: NodeConfig) {
     private fun handleMessage(message: String) {
         messageHandler.handleMessage(
             message,
-            onRequest = { RAMessage -> ricartAgrawala.handleRequest(RAMessage) },
-            onReply = { RAMessage -> ricartAgrawala.handleReply(RAMessage) },
-            onRelease = { RAMessage -> ricartAgrawala.handleRelease(RAMessage) }
+            onRequest = { ramessage -> 
+                controller.logIncomingRequest(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
+                ricartAgrawala.handleRequest(ramessage) 
+            },
+            onReply = { ramessage -> 
+                controller.logIncomingReply(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
+                ricartAgrawala.handleReply(ramessage) 
+            },
+            onRelease = { ramessage -> 
+                controller.logIncomingRelease(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
+                ricartAgrawala.handleRelease(ramessage) 
+            }
         )
     }
     

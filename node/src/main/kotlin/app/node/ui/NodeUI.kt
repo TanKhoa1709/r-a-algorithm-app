@@ -147,6 +147,8 @@ fun NodeUI(controller: NodeController) {
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 LogPanel(
+                    entries = controller.eventLogger.getEntries(),
+                    eventLogger = controller.eventLogger,
                     modifier = Modifier.weight(1f)
                 )
                 PeersList(
