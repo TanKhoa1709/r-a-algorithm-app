@@ -453,7 +453,7 @@ private fun LogPanel(
                 .fillMaxSize()
                 .padding(20.dp)
         ) {
-            // Header with icon
+            // Header with icon and count badge
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -471,26 +471,181 @@ private fun LogPanel(
                     fontWeight = FontWeight.Bold,
                     color = VisualizerColors.TextPrimary
                 )
+                if (state.logEntries.isNotEmpty()) {
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(VisualizerColors.Primary.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = state.logEntries.size.toString(),
+                            style = MaterialTheme.typography.caption,
+                            color = VisualizerColors.Primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(VisualizerColors.SurfaceVariant)
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                items(state.logLines) { line ->
+            if (state.logEntries.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(VisualizerColors.SurfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = line,
+                        "No events yet",
                         style = MaterialTheme.typography.body2,
-                        color = VisualizerColors.TextPrimary
+                        color = VisualizerColors.TextMuted
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(state.logEntries.reversed()) { entry ->
+                        LogEntryCard(entry)
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun LogEntryCard(entry: LogEntry) {
+    val isCompleted = entry.exitTime != null
+    val statusColor = if (isCompleted) VisualizerColors.Success else VisualizerColors.Warning
+    val statusBg = if (isCompleted) VisualizerColors.SuccessLight else VisualizerColors.WarningLight
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, VisualizerColors.CardBorder, RoundedCornerShape(10.dp))
+            .background(VisualizerColors.SurfaceVariant)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Top row: Node ID and Status
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(statusColor)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = entry.nodeId,
+                    style = MaterialTheme.typography.body1,
+                    fontWeight = FontWeight.SemiBold,
+                    color = VisualizerColors.TextPrimary
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(statusBg)
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = if (isCompleted) "COMPLETED" else "ACTIVE",
+                    style = MaterialTheme.typography.caption,
+                    fontWeight = FontWeight.SemiBold,
+                    color = statusColor,
+                    fontSize = 10.sp
+                )
+            }
+        }
+        
+        // Request ID row
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Request: ",
+                style = MaterialTheme.typography.caption,
+                color = VisualizerColors.TextMuted
+            )
+            Text(
+                text = entry.requestId,
+                style = MaterialTheme.typography.caption,
+                fontWeight = FontWeight.Medium,
+                color = VisualizerColors.TextSecondary
+            )
+        }
+        
+        Divider(color = VisualizerColors.Divider, thickness = 1.dp)
+        
+        // Time details grid
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Entry time
+            Column {
+                Text(
+                    text = "Enter",
+                    style = MaterialTheme.typography.caption,
+                    color = VisualizerColors.TextMuted,
+                    fontSize = 10.sp
+                )
+                Text(
+                    text = formatTimestamp(entry.entryTime),
+                    style = MaterialTheme.typography.body2,
+                    fontWeight = FontWeight.Medium,
+                    color = VisualizerColors.TextPrimary
+                )
+            }
+            
+            // Exit time
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Exit",
+                    style = MaterialTheme.typography.caption,
+                    color = VisualizerColors.TextMuted,
+                    fontSize = 10.sp
+                )
+                Text(
+                    text = entry.exitTime?.let { formatTimestamp(it) } ?: "—",
+                    style = MaterialTheme.typography.body2,
+                    fontWeight = FontWeight.Medium,
+                    color = if (entry.exitTime != null) VisualizerColors.TextPrimary else VisualizerColors.TextMuted
+                )
+            }
+            
+            // Duration
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "Duration",
+                    style = MaterialTheme.typography.caption,
+                    color = VisualizerColors.TextMuted,
+                    fontSize = 10.sp
+                )
+                Text(
+                    text = entry.duration?.let { "${it}ms" } ?: "—",
+                    style = MaterialTheme.typography.body2,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (entry.duration != null) VisualizerColors.Primary else VisualizerColors.TextMuted
+                )
+            }
+        }
+    }
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    formatter.timeZone = java.util.TimeZone.getTimeZone("GMT+7")
+    return formatter.format(java.util.Date(timestamp)) + " +07"
 }
 
 @Composable

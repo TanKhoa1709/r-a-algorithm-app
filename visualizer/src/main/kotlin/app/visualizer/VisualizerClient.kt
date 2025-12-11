@@ -67,9 +67,15 @@ private fun VisualizerSnapshot.toUiState(): VisualizerState =
         nodes = this.nodes.map { it.toNodeInfo() },
         currentCsHolder = this.currentHolder,
         queue = this.queue,
-        logLines = this.accessHistory.map { entry ->
-            "[${entry.timestamp}] node ${entry.nodeId} request=${entry.requestId} " +
-                    "enter=${entry.entryTime} exit=${entry.exitTime} dur=${entry.duration}"
+        logEntries = this.accessHistory.map { entry ->
+            LogEntry(
+                nodeId = entry.nodeId,
+                requestId = entry.requestId,
+                timestamp = entry.timestamp,
+                entryTime = entry.entryTime,
+                exitTime = entry.exitTime,
+                duration = entry.duration
+            )
         },
         metrics = this.metrics.toMetrics()
     )
