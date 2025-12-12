@@ -1,6 +1,6 @@
 {
   "nodeId": "Node-2",
-  "host": "localhost",
+  "host": "auto",
   "port": 8082,
   "csHostUrl": "http://localhost:8080",
   "discoveryPort": 8888,
