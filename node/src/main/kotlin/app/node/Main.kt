@@ -23,7 +23,7 @@ private fun detectLocalIp(): String {
     // Explicit override via environment
     System.getenv("NODE_HOST")?.takeIf { it.isNotBlank() }?.let { return it.trim() }
 
-    val interfaces = NetworkInterface.getNetworkInterfaces() ?: return "127.0.0.1"
+    val interfaces = NetworkInterface.getNetworkInterfaces() ?: return "127.0.0.1" // fallback to localhost
     val ifaces = Collections.list(interfaces)
         .filter { it.isUp && !it.isLoopback && !it.isVirtual && !it.isPointToPoint }
         .filter { ni ->
@@ -82,7 +82,7 @@ private fun resolveHost(rawHost: String): String {
 }
 
 fun main(args: Array<String>) {
-    val configPath = args.getOrNull(0) ?: "config/nodes/node2.json"
+    val configPath = args.getOrNull(0) ?: "config/nodes/node3.json"
     val configFile = File(configPath)
 
     val rawSharedConfig = if (configFile.exists()) {

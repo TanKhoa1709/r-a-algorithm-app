@@ -1,9 +1,11 @@
 package app.visualizer
 
 enum class NodeState {
-    IDLE,
-    WANTED,
-    HELD
+    IDLE,              // Node không request CS
+    REQUESTING,        // Node đã gửi REQUEST, đang chờ replies
+    WAITING_REPLIES,   // Node đang chờ replies từ các nodes khác
+    IN_CS,             // Node đã vào CS (theo Ricart-Agrawala) và đang access resource
+    HELD               // Alias cho IN_CS (backward compatibility)
 }
 
 data class NodeInfo(
@@ -33,7 +35,7 @@ data class LogEntry(
 data class VisualizerState(
     val nodes: List<NodeInfo> = emptyList(),
     val currentCsHolder: String? = null,
-    val queue: List<String> = emptyList(),
+    val queue: List<String> = emptyList(),  // Deprecated - không còn queue, giữ để backward compatibility
     val logEntries: List<LogEntry> = emptyList(),
     val metrics: Metrics = Metrics()
 )

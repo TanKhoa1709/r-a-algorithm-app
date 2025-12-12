@@ -86,8 +86,10 @@ private fun VisualizerNodeDto.toNodeInfo(): NodeInfo =
         host = "",       // tạm để trống
         port = 0,
         state = when (this.state) {
-            "WANTED" -> NodeState.WANTED
-            "HELD" -> NodeState.HELD
+            "REQUESTING" -> NodeState.REQUESTING
+            "WAITING_REPLIES" -> NodeState.WAITING_REPLIES
+            "IN_CS", "HELD" -> NodeState.IN_CS
+            "WANTED" -> NodeState.REQUESTING  // Backward compatibility
             else -> NodeState.IDLE
         },
         lastRequestTime = null
