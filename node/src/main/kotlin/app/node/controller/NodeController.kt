@@ -192,14 +192,22 @@ class NodeController(
     }
     
     fun onNodeDiscovered(nodeConfig: NodeConfig) {
-        connectedNodes.add(nodeConfig.nodeId)
-        eventLogger.info("Node discovered", 
-            mapOf("nodeId" to nodeConfig.nodeId, "host" to nodeConfig.host, "port" to nodeConfig.port.toString()))
+        val added = connectedNodes.add(nodeConfig.nodeId)
+        // Log chỉ khi trạng thái thực sự thay đổi (node mới được thêm)
+        if (added) {
+            eventLogger.info(
+                "Node discovered",
+                mapOf("nodeId" to nodeConfig.nodeId, "host" to nodeConfig.host, "port" to nodeConfig.port.toString())
+            )
+        }
     }
     
     fun onNodeLost(nodeId: String) {
-        connectedNodes.remove(nodeId)
-        eventLogger.warning("Node lost", mapOf("nodeId" to nodeId))
+        val removed = connectedNodes.remove(nodeId)
+        // Log chỉ khi trạng thái thực sự thay đổi (node vừa bị mất)
+        if (removed) {
+            eventLogger.warning("Node lost", mapOf("nodeId" to nodeId))
+        }
     }
     
     /**
