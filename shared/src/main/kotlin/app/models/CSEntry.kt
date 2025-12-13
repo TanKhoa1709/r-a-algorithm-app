@@ -12,6 +12,9 @@ data class CSEntry(
     val timestamp: Long,
     val entryTime: Long,
     val exitTime: Long? = null,
-    val duration: Long? = null
+    val duration: Long? = null,
+    val transactionType: String? = null,  // "WITHDRAW" or "DEPOSIT"
+    val amount: Long? = null,  // Transaction amount
+    val balance: Long? = null  // Balance after transaction
 )
 

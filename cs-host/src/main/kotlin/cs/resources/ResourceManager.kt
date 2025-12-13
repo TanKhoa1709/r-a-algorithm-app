@@ -10,8 +10,9 @@ class ResourceManager {
     
     init {
         // Register default resources
+        // Bank account với số dư ban đầu 100000
+        registerResource(BankAccountResource(initialBalance = 100000L))
         registerResource(SharedCounterResource())
-        registerResource(BankAccountResource())
         registerResource(DocumentResource())
         registerResource(PrinterResource())
     }

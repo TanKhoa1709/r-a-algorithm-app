@@ -1,5 +1,7 @@
 package cs.api
 
+import app.models.TransactionRequest
+import app.models.TransactionResult
 import cs.CSHost
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -67,6 +69,28 @@ fun Application.configureCSRoutes(csHost: CSHost) {
                 resourceManager.releaseResource(resourceId, payload.nodeId, payload.requestId)
                 call.respond(mapOf("success" to true))
             }
+            
+            // Withdraw money from bank account
+            post("/bank/withdraw") {
+                val payload = call.receiveValidated<TransactionRequest>() ?: return@post
+                val result = csHost.withdraw(payload.nodeId, payload.requestId, payload.amount)
+                call.respond(result)
+            }
+            
+            // Deposit money to bank account
+            post("/bank/deposit") {
+                val payload = call.receiveValidated<TransactionRequest>() ?: return@post
+                val result = csHost.deposit(payload.nodeId, payload.requestId, payload.amount)
+                call.respond(result)
+            }
+            
+            // Get bank balance
+            get("/bank/balance") {
+                val resourceManager = csHost.getResourceManager()
+                val bankAccount = resourceManager.getResource("bank-account") as? cs.resources.BankAccountResource
+                val balance = bankAccount?.getBalance() ?: 0L
+                call.respond(mapOf("balance" to balance))
+            }
         }
     }
 }
@@ -82,6 +106,7 @@ data class ReleaseRequest(
     val nodeId: String,
     val requestId: String
 )
+
 
 /**
  * Helper to receive and validate JSON payloads with lenient parsing and clear errors.

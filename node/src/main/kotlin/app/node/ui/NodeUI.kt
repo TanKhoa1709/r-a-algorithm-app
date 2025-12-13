@@ -225,21 +225,25 @@ fun NodeUI(
             Spacer(modifier = Modifier.height(20.dp))
 
             ControlPanel(
-                onRequestCS = {
-                    try {
-                        controller.requestCriticalSection()
-                        // state update qua LaunchedEffect
-                    } catch (_: Exception) {
+                onWithdraw = { amount ->
+                    scope.launch {
+                        try {
+                            controller.withdraw(amount)
+                        } catch (e: Exception) {
+                            // Error already logged in controller
+                        }
                     }
                 },
-                onReleaseCS = {
-                    try {
-                        controller.releaseCriticalSection()
-                    } catch (_: Exception) {
+                onDeposit = { amount ->
+                    scope.launch {
+                        try {
+                            controller.deposit(amount)
+                        } catch (e: Exception) {
+                            // Error already logged in controller
+                        }
                     }
                 },
                 enabled = !inCS && !hasPendingRequest,
-                releaseEnabled = inCS,
                 modifier = Modifier.fillMaxWidth()
             )
 

@@ -1,10 +1,9 @@
 {
-  "nodeId": "Node-1",
-  "host": "auto",
-  "port": 8081,
-  "csHostUrl": "http://localhost:8080",
-  "discoveryPort": 8888,
-  "heartbeatInterval": 5000,
-  "requestTimeout": 30000
+    "nodeId": "Node-1",
+    "host": "auto",
+    "port": 8081,
+    "csHostUrl": "http://localhost:8080",
+    "discoveryPort": 8888,
+    "heartbeatInterval": 5000,
+    "requestTimeout": 30000
 }
-

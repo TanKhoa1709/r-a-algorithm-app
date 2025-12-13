@@ -23,6 +23,15 @@ data class Metrics(
     val violationCount: Int = 0
 )
 
+data class TransactionEntry(
+    val nodeId: String,
+    val requestId: String,
+    val timestamp: Long,
+    val transactionType: String,  // "WITHDRAW" or "DEPOSIT"
+    val amount: Long,
+    val balance: Long  // Balance after transaction
+)
+
 data class LogEntry(
     val nodeId: String,
     val requestId: String,
@@ -32,10 +41,21 @@ data class LogEntry(
     val duration: Long? = null
 )
 
+data class BankMetrics(
+    val totalTransactions: Int = 0,
+    val totalWithdrawals: Int = 0,
+    val totalDeposits: Int = 0,
+    val totalWithdrawn: Long = 0L,
+    val totalDeposited: Long = 0L
+)
+
 data class VisualizerState(
     val nodes: List<NodeInfo> = emptyList(),
     val currentCsHolder: String? = null,
     val queue: List<String> = emptyList(),  // Deprecated - không còn queue, giữ để backward compatibility
     val logEntries: List<LogEntry> = emptyList(),
-    val metrics: Metrics = Metrics()
+    val metrics: Metrics = Metrics(),
+    val bankBalance: Long = 0L,  // Current bank balance
+    val transactions: List<TransactionEntry> = emptyList(),  // Transaction history
+    val bankMetrics: BankMetrics = BankMetrics()  // Bank-specific metrics
 )

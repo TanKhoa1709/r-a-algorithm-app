@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,7 +76,7 @@ fun VisualizerScreen(state: VisualizerState) {
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
-                            text = "R&A CS Visualizer",
+                            text = "Bank Dashboard",
                             style = MaterialTheme.typography.h4.copy(
                                 fontSize = 26.sp,
                                 letterSpacing = (-0.5).sp
@@ -84,7 +85,7 @@ fun VisualizerScreen(state: VisualizerState) {
                             color = VisualizerColors.TextPrimary
                         )
                         Text(
-                            text = "Real-time Critical Section Monitoring",
+                            text = "Distributed Bank System - Ricart-Agrawala Algorithm",
                             style = MaterialTheme.typography.caption,
                             color = VisualizerColors.TextMuted
                         )
@@ -93,11 +94,19 @@ fun VisualizerScreen(state: VisualizerState) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Bank Balance Panel - Large and prominent
+                BankBalancePanel(
+                    balance = state.bankBalance,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 Row(
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // Cột trái: topology + algorithm info
+                    // Cột trái: branches + metrics
                     Column(
                         modifier = Modifier
                             .weight(2f)
@@ -108,26 +117,22 @@ fun VisualizerScreen(state: VisualizerState) {
                             state = state,
                             modifier = Modifier.weight(1f)
                         )
-                        AlgorithmInfoView(
-                            state = state,
+                        BankMetricsPanel(
+                            metrics = state.bankMetrics,
                             modifier = Modifier.weight(1f)
                         )
                     }
 
-                    // Cột phải: log + metrics
+                    // Cột phải: transaction history
                     Column(
                         modifier = Modifier
                             .weight(3f)
                             .fillMaxHeight(),
                         verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
-                        LogPanel(
-                            state = state,
-                            modifier = Modifier.weight(1f)
-                        )
-                        MetricsPanel(
-                            metrics = state.metrics,
-                            modifier = Modifier.weight(1f)
+                        TransactionHistoryPanel(
+                            transactions = state.transactions,
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
                 }
@@ -268,7 +273,7 @@ private fun TopologyView(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Topology & CS State",
+                    "Branches & Status",
                     style = MaterialTheme.typography.h6,
                     fontWeight = FontWeight.Bold,
                     color = VisualizerColors.TextPrimary
@@ -286,7 +291,7 @@ private fun TopologyView(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Current CS holder:",
+                    "Active Branch:",
                     style = MaterialTheme.typography.body2,
                     color = VisualizerColors.TextSecondary
                 )
@@ -657,6 +662,295 @@ private fun formatTimestamp(timestamp: Long): String {
     val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
     formatter.timeZone = java.util.TimeZone.getTimeZone("GMT+7")
     return formatter.format(java.util.Date(timestamp)) + " +07"
+}
+
+@Composable
+private fun BankBalancePanel(
+    balance: Long,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = VisualizerColors.CardShadow,
+                spotColor = VisualizerColors.CardShadow
+            )
+            .clip(RoundedCornerShape(20.dp))
+            .border(2.dp, VisualizerColors.Primary.copy(alpha = 0.3f), RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        elevation = 0.dp,
+        backgroundColor = VisualizerColors.CardBackground
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Current Balance",
+                    style = MaterialTheme.typography.h6,
+                    color = VisualizerColors.TextSecondary,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = formatCurrency(balance),
+                    style = MaterialTheme.typography.h3.copy(
+                        fontSize = 48.sp
+                    ),
+                    fontWeight = FontWeight.Bold,
+                    color = VisualizerColors.Primary
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = null,
+                tint = VisualizerColors.Primary,
+                modifier = Modifier.size(64.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TransactionHistoryPanel(
+    transactions: List<TransactionEntry>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = VisualizerColors.CardShadow,
+                spotColor = VisualizerColors.CardShadow
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, VisualizerColors.CardBorder, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        elevation = 0.dp,
+        backgroundColor = VisualizerColors.CardBackground
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp)
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.List,
+                    contentDescription = null,
+                    tint = VisualizerColors.Primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Transaction History",
+                    style = MaterialTheme.typography.h6,
+                    fontWeight = FontWeight.Bold,
+                    color = VisualizerColors.TextPrimary
+                )
+                if (transactions.isNotEmpty()) {
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(VisualizerColors.Primary.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = transactions.size.toString(),
+                            style = MaterialTheme.typography.caption,
+                            color = VisualizerColors.Primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
+            if (transactions.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(VisualizerColors.SurfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No transactions yet",
+                        style = MaterialTheme.typography.body2,
+                        color = VisualizerColors.TextMuted
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(transactions) { transaction ->
+                        TransactionCard(transaction)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransactionCard(transaction: TransactionEntry) {
+    val isWithdraw = transaction.transactionType == "WITHDRAW"
+    val color = if (isWithdraw) {
+        VisualizerColors.Error
+    } else {
+        VisualizerColors.Success
+    }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, VisualizerColors.CardBorder, RoundedCornerShape(10.dp))
+            .background(VisualizerColors.SurfaceVariant)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Top row: Type and Amount
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = transaction.transactionType,
+                    style = MaterialTheme.typography.body1,
+                    fontWeight = FontWeight.SemiBold,
+                    color = VisualizerColors.TextPrimary
+                )
+            }
+            Text(
+                text = formatCurrency(transaction.amount),
+                style = MaterialTheme.typography.h6,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
+        
+        Divider(color = VisualizerColors.Divider, thickness = 1.dp)
+        
+        // Details row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = "Branch: ${transaction.nodeId}",
+                    style = MaterialTheme.typography.caption,
+                    color = VisualizerColors.TextMuted
+                )
+                Text(
+                    text = formatTimestamp(transaction.timestamp),
+                    style = MaterialTheme.typography.caption,
+                    color = VisualizerColors.TextMuted
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "Balance",
+                    style = MaterialTheme.typography.caption,
+                    color = VisualizerColors.TextMuted
+                )
+                Text(
+                    text = formatCurrency(transaction.balance),
+                    style = MaterialTheme.typography.body1,
+                    fontWeight = FontWeight.SemiBold,
+                    color = VisualizerColors.TextPrimary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BankMetricsPanel(
+    metrics: BankMetrics,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = VisualizerColors.CardShadow,
+                spotColor = VisualizerColors.CardShadow
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, VisualizerColors.CardBorder, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        elevation = 0.dp,
+        backgroundColor = VisualizerColors.CardBackground
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = VisualizerColors.Primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Bank Statistics",
+                    style = MaterialTheme.typography.h6,
+                    fontWeight = FontWeight.Bold,
+                    color = VisualizerColors.TextPrimary
+                )
+            }
+
+            // Metrics grid
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MetricItem("Total Transactions", metrics.totalTransactions.toString())
+                MetricItem("Withdrawals", metrics.totalWithdrawals.toString())
+                MetricItem("Deposits", metrics.totalDeposits.toString())
+                Divider(color = VisualizerColors.Divider, thickness = 1.dp)
+                MetricItem("Total Withdrawn", formatCurrency(metrics.totalWithdrawn))
+                MetricItem("Total Deposited", formatCurrency(metrics.totalDeposited))
+            }
+        }
+    }
+}
+
+private fun formatCurrency(amount: Long): String {
+    return "₫${String.format("%,d", amount)}"
 }
 
 @Composable

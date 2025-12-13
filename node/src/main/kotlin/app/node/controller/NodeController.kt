@@ -3,8 +3,9 @@ package app.node.controller
 import app.core.RicartAgrawala
 import app.models.CSState
 import app.models.NodeConfig
+import app.models.TransactionResult
 import app.net.websocket.ConnectionManager
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -22,48 +23,67 @@ class NodeController(
     @Volatile private var csHostState: CSState? = null
     val eventLogger = EventLogger(maxEntries = 200)
     
+    // Store transaction type and amount for when we enter CS
+    private var pendingTransactionType: String? = null  // "WITHDRAW" or "DEPOSIT"
+    private var pendingTransactionAmount: Long? = null
+    private var transactionResult: kotlinx.coroutines.CompletableDeferred<TransactionResult>? = null
+    
     /**
-     * Request to enter critical section
+     * Withdraw money from bank account
+     * Sử dụng Ricart-Agrawala để đảm bảo mutual exclusion
      */
-    fun requestCriticalSection(): String {
+    suspend fun withdraw(amount: Long): TransactionResult {
         if (inCriticalSection) {
-            eventLogger.error("Cannot request CS: Already in critical section")
+            eventLogger.error("Cannot withdraw: Already in critical section")
             throw IllegalStateException("Already in critical section")
         }
         if (currentRequestId != null) {
-            eventLogger.warning("Cannot request CS: Already have a pending request", 
+            eventLogger.warning("Cannot withdraw: Already have a pending request", 
                 mapOf("requestId" to currentRequestId!!))
             throw IllegalStateException("Already have a pending request")
         }
-        currentRequestId = ricartAgrawala.requestCriticalSection()
-        eventLogger.info("Requested critical section", 
-            mapOf("requestId" to currentRequestId!!, "timestamp" to ricartAgrawala.getClock().toString()))
         
-        // Note: KHÔNG request CS Host ở đây
-        // CS Host chỉ được gọi SAU KHI đã vào CS (khi Ricart-Agrawala cho phép)
-        // Ricart-Agrawala algorithm quyết định thứ tự vào CS (distributed)
-        return currentRequestId!!
+        // Store transaction info
+        pendingTransactionType = "WITHDRAW"
+        pendingTransactionAmount = amount
+        transactionResult = kotlinx.coroutines.CompletableDeferred()
+        
+        // Request CS via Ricart-Agrawala
+        currentRequestId = ricartAgrawala.requestCriticalSection()
+        eventLogger.info("Requested CS for withdraw", 
+            mapOf("requestId" to currentRequestId!!, "amount" to amount.toString(), "timestamp" to ricartAgrawala.getClock().toString()))
+        
+        // Wait for transaction to complete (will be completed in onEnterCriticalSection)
+        return transactionResult!!.await()
     }
     
     /**
-     * Release critical section
+     * Deposit money to bank account
+     * Sử dụng Ricart-Agrawala để đảm bảo mutual exclusion
      */
-    fun releaseCriticalSection() {
-        if (!inCriticalSection || currentRequestId == null) {
-            eventLogger.error("Cannot release CS: Not in critical section")
-            throw IllegalStateException("Not in critical section")
+    suspend fun deposit(amount: Long): TransactionResult {
+        if (inCriticalSection) {
+            eventLogger.error("Cannot deposit: Already in critical section")
+            throw IllegalStateException("Already in critical section")
         }
-        val requestId = currentRequestId!!
-        eventLogger.info("Releasing critical section", mapOf("requestId" to requestId))
+        if (currentRequestId != null) {
+            eventLogger.warning("Cannot deposit: Already have a pending request", 
+                mapOf("requestId" to currentRequestId!!))
+            throw IllegalStateException("Already have a pending request")
+        }
         
-        // Release CS host first, then notify peers
-        runBlocking {
-            csInteractionController.releaseResource("counter", config.nodeId, requestId)
-            csInteractionController.releaseAccess(config.nodeId, requestId)
-        }
-        ricartAgrawala.releaseCriticalSection()
-        eventLogger.success("Critical section released", mapOf("requestId" to requestId))
-        currentRequestId = null
+        // Store transaction info
+        pendingTransactionType = "DEPOSIT"
+        pendingTransactionAmount = amount
+        transactionResult = kotlinx.coroutines.CompletableDeferred()
+        
+        // Request CS via Ricart-Agrawala
+        currentRequestId = ricartAgrawala.requestCriticalSection()
+        eventLogger.info("Requested CS for deposit", 
+            mapOf("requestId" to currentRequestId!!, "amount" to amount.toString(), "timestamp" to ricartAgrawala.getClock().toString()))
+        
+        // Wait for transaction to complete (will be completed in onEnterCriticalSection)
+        return transactionResult!!.await()
     }
     
     /**
@@ -136,24 +156,73 @@ class NodeController(
         eventLogger.success("Entered critical section", 
             mapOf("requestId" to (currentRequestId ?: "unknown"), "clock" to ricartAgrawala.getClock().toString()))
         
-        // SAU KHI vào CS, request access resource từ CS Host
-        // CS Host chỉ kiểm tra resource availability, không phải coordinator
-        if (currentRequestId != null) {
-            runBlocking {
-                val granted = csInteractionController.requestAccess(config.nodeId, currentRequestId!!)
-                if (granted) {
-                    eventLogger.success("CS Host resource available", 
-                        mapOf("requestId" to currentRequestId!!))
-                    // Access default resource
-                    csInteractionController.accessResource("counter", config.nodeId, currentRequestId!!)
-                } else {
-                    eventLogger.warning("CS Host resource busy - should not happen if Ricart-Agrawala correct", 
-                        mapOf("requestId" to currentRequestId!!))
-                    // This should not happen if Ricart-Agrawala is working correctly
-                    // But we still entered CS, so log warning
+        // Thực hiện transaction (withdraw/deposit) trong coroutine
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                val transactionType = pendingTransactionType
+                val amount = pendingTransactionAmount
+                val requestId = currentRequestId
+                
+                if (transactionType != null && amount != null && requestId != null) {
+                    // Thực hiện transaction trên CS Host
+                    val result = when (transactionType) {
+                        "WITHDRAW" -> {
+                            eventLogger.info("Executing withdraw", mapOf("amount" to amount.toString()))
+                            csInteractionController.withdraw(config.nodeId, requestId, amount)
+                        }
+                        "DEPOSIT" -> {
+                            eventLogger.info("Executing deposit", mapOf("amount" to amount.toString()))
+                            csInteractionController.deposit(config.nodeId, requestId, amount)
+                        }
+                        else -> TransactionResult(success = false, message = "Unknown transaction type", balance = 0L)
+                    }
+                    
+                    if (result.success) {
+                        eventLogger.success("Transaction successful", 
+                            mapOf("type" to transactionType, "amount" to amount.toString(), "balance" to result.balance.toString()))
+                    } else {
+                        eventLogger.error("Transaction failed", 
+                            mapOf("type" to transactionType, "amount" to amount.toString(), "message" to result.message))
+                    }
+                    
+                    // Sleep 5 seconds
+                    delay(5000)
+                    
+                    // Complete transaction result
+                    transactionResult?.complete(result)
+                    
+                    // Release CS
+                    releaseCriticalSection()
                 }
+            } catch (e: Exception) {
+                val errorMsg = e.message ?: "Unknown error"
+                eventLogger.error("Error in transaction", mapOf("error" to errorMsg))
+                transactionResult?.complete(TransactionResult(success = false, message = errorMsg, balance = 0L))
+                // Release CS even on error
+                releaseCriticalSection()
             }
         }
+    }
+    
+    /**
+     * Release critical section (internal method)
+     */
+    private fun releaseCriticalSection() {
+        if (!inCriticalSection || currentRequestId == null) {
+            return
+        }
+        val requestId = currentRequestId!!
+        eventLogger.info("Releasing critical section", mapOf("requestId" to requestId))
+        
+        runBlocking {
+            csInteractionController.releaseAccess(config.nodeId, requestId)
+        }
+        ricartAgrawala.releaseCriticalSection()
+        eventLogger.success("Critical section released", mapOf("requestId" to requestId))
+        currentRequestId = null
+        pendingTransactionType = null
+        pendingTransactionAmount = null
+        transactionResult = null
     }
     
     fun onExitCriticalSection() {

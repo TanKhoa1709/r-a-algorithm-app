@@ -3,37 +3,27 @@ package cs.resources
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Bank account resource (simulated)
+ * Bank account resource - Shared bank account with initial balance 100000
  */
 class BankAccountResource(
     override val resourceId: String = "bank-account",
     override val resourceName: String = "Bank Account",
-    initialBalance: Long = 1000
+    initialBalance: Long = 100000L  // Số dư ban đầu: 100000
 ) : SharedResource {
     private val balance = AtomicLong(initialBalance)
     private val accessCount = AtomicLong(0)
     private var lastAccessTime: Long? = null
     
     override suspend fun access(nodeId: String, requestId: String): ResourceAccessResult {
-        accessCount.incrementAndGet()
-        lastAccessTime = System.currentTimeMillis()
-        
-        // Simulate transaction
-        val amount = 100L
-        val newBalance = balance.addAndGet(amount)
-        val data: Map<String, String> = mapOf(
-            "balance" to newBalance.toString(),
-            "transaction" to amount.toString()
-        )
+        // Không dùng method này nữa, dùng withdraw/deposit trực tiếp
         return ResourceAccessResult(
-            success = true,
-            message = "Deposited $amount, new balance: $newBalance",
-            data = data,
+            success = false,
+            message = "Use withdraw or deposit methods instead"
         )
     }
     
     override suspend fun release(nodeId: String, requestId: String) {
-        // Transaction completed
+        // Không dùng method này nữa
     }
     
     override fun getState(): ResourceState {
@@ -47,11 +37,38 @@ class BankAccountResource(
         )
     }
     
+    /**
+     * Get current balance
+     */
     fun getBalance(): Long = balance.get()
+    
+    /**
+     * Withdraw money from account
+     * @return true if successful, false if insufficient balance
+     */
     fun withdraw(amount: Long): Boolean {
-        return balance.updateAndGet { current ->
-            if (current >= amount) current - amount else current
-        } != balance.get()
+        if (amount <= 0) return false
+        var success = false
+        balance.updateAndGet { current ->
+            if (current >= amount) {
+                success = true
+                current - amount
+            } else {
+                success = false
+                current
+            }
+        }
+        return success
+    }
+    
+    /**
+     * Deposit money to account
+     * @return true if successful
+     */
+    fun deposit(amount: Long): Boolean {
+        if (amount <= 0) return false
+        balance.addAndGet(amount)
+        return true
     }
 }
 

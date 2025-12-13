@@ -2,6 +2,7 @@ package cs
 
 import app.models.CSState
 import app.models.CSEntry
+import app.models.TransactionResult
 import app.models.Violation
 import app.models.VisualizerMetricsDto
 import app.models.VisualizerNodeDto
@@ -162,6 +163,112 @@ class CSHost(
      * Get resource manager
      */
     fun getResourceManager(): ResourceManager = resourceManager
+    
+    /**
+     * Withdraw money from bank account
+     * Node phải đã vào CS theo Ricart-Agrawala trước khi gọi method này
+     * @return TransactionResult với success và balance mới
+     */
+    suspend fun withdraw(nodeId: String, requestId: String, amount: Long): TransactionResult {
+        val bankAccount = resourceManager.getResource("bank-account") as? cs.resources.BankAccountResource
+            ?: return TransactionResult(success = false, message = "Bank account resource not found", balance = 0L)
+        
+        // Kiểm tra node có đang giữ resource không (đã vào CS)
+        val granted = accessMutex.withLock {
+            if (currentHolder.get() == null || currentHolder.get() == nodeId) {
+                if (currentHolder.get() == null) {
+                    grantAccess(nodeId, requestId)
+                }
+                true
+            } else {
+                false
+            }
+        }
+        
+        if (!granted) {
+            return TransactionResult(success = false, message = "Resource not available", balance = bankAccount.getBalance())
+        }
+        
+        // Thực hiện withdraw
+        val success = bankAccount.withdraw(amount)
+        val newBalance = bankAccount.getBalance()
+        
+        // Ghi log lịch sử
+        val transactionEntry = CSEntry(
+            nodeId = nodeId,
+            requestId = requestId,
+            timestamp = System.currentTimeMillis(),
+            entryTime = System.currentTimeMillis(),
+            exitTime = System.currentTimeMillis(),
+            duration = 0,
+            transactionType = "WITHDRAW",
+            amount = amount,
+            balance = newBalance
+        )
+        accessHistory.offer(transactionEntry)
+        
+        notifyNodes()
+        notifyVisualizer()
+        
+        return TransactionResult(
+            success = success,
+            message = if (success) "Withdrew $amount, new balance: $newBalance" else "Insufficient balance",
+            balance = newBalance
+        )
+    }
+    
+    /**
+     * Deposit money to bank account
+     * Node phải đã vào CS theo Ricart-Agrawala trước khi gọi method này
+     * @return TransactionResult với success và balance mới
+     */
+    suspend fun deposit(nodeId: String, requestId: String, amount: Long): TransactionResult {
+        val bankAccount = resourceManager.getResource("bank-account") as? cs.resources.BankAccountResource
+            ?: return TransactionResult(success = false, message = "Bank account resource not found", balance = 0L)
+        
+        // Kiểm tra node có đang giữ resource không (đã vào CS)
+        val granted = accessMutex.withLock {
+            if (currentHolder.get() == null || currentHolder.get() == nodeId) {
+                if (currentHolder.get() == null) {
+                    grantAccess(nodeId, requestId)
+                }
+                true
+            } else {
+                false
+            }
+        }
+        
+        if (!granted) {
+            return TransactionResult(success = false, message = "Resource not available", balance = bankAccount.getBalance())
+        }
+        
+        // Thực hiện deposit
+        val success = bankAccount.deposit(amount)
+        val newBalance = bankAccount.getBalance()
+        
+        // Ghi log lịch sử
+        val transactionEntry = CSEntry(
+            nodeId = nodeId,
+            requestId = requestId,
+            timestamp = System.currentTimeMillis(),
+            entryTime = System.currentTimeMillis(),
+            exitTime = System.currentTimeMillis(),
+            duration = 0,
+            transactionType = "DEPOSIT",
+            amount = amount,
+            balance = newBalance
+        )
+        accessHistory.offer(transactionEntry)
+        
+        notifyNodes()
+        notifyVisualizer()
+        
+        return TransactionResult(
+            success = success,
+            message = "Deposited $amount, new balance: $newBalance",
+            balance = newBalance
+        )
+    }
 
     /**
      * Xây snapshot gửi cho visualizer
@@ -193,12 +300,17 @@ class CSHost(
             violationCount = state.violations.size
         )
 
+        // Get bank balance
+        val bankAccount = resourceManager.getResource("bank-account") as? cs.resources.BankAccountResource
+        val bankBalance = bankAccount?.getBalance() ?: 0L
+        
         return VisualizerSnapshot(
             nodes = nodes,
             currentHolder = state.currentHolder,
             queue = emptyList(), // KHÔNG có queue
             accessHistory = history,
-            metrics = metricsDto
+            metrics = metricsDto,
+            bankBalance = bankBalance
         )
     }
 

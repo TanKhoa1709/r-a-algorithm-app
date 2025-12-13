@@ -62,8 +62,29 @@ class VisualizerClient(
 }
 
 // Convert DTO shared -> UI state
-private fun VisualizerSnapshot.toUiState(): VisualizerState =
-    VisualizerState(
+private fun VisualizerSnapshot.toUiState(): VisualizerState {
+    // Extract transactions (entries with transactionType)
+    val transactions = this.accessHistory
+        .filter { it.transactionType != null && it.amount != null && it.balance != null }
+        .map { entry ->
+            TransactionEntry(
+                nodeId = entry.nodeId,
+                requestId = entry.requestId,
+                timestamp = entry.timestamp,
+                transactionType = entry.transactionType!!,
+                amount = entry.amount!!,
+                balance = entry.balance!!
+            )
+        }
+        .sortedByDescending { it.timestamp }  // Newest first
+    
+    // Calculate bank metrics
+    val totalWithdrawals = transactions.count { it.transactionType == "WITHDRAW" }
+    val totalDeposits = transactions.count { it.transactionType == "DEPOSIT" }
+    val totalWithdrawn = transactions.filter { it.transactionType == "WITHDRAW" }.sumOf { it.amount }
+    val totalDeposited = transactions.filter { it.transactionType == "DEPOSIT" }.sumOf { it.amount }
+    
+    return VisualizerState(
         nodes = this.nodes.map { it.toNodeInfo() },
         currentCsHolder = this.currentHolder,
         queue = this.queue,
@@ -77,8 +98,18 @@ private fun VisualizerSnapshot.toUiState(): VisualizerState =
                 duration = entry.duration
             )
         },
-        metrics = this.metrics.toMetrics()
+        metrics = this.metrics.toMetrics(),
+        bankBalance = this.bankBalance,
+        transactions = transactions,
+        bankMetrics = BankMetrics(
+            totalTransactions = transactions.size,
+            totalWithdrawals = totalWithdrawals,
+            totalDeposits = totalDeposits,
+            totalWithdrawn = totalWithdrawn,
+            totalDeposited = totalDeposited
+        )
     )
+}
 
 private fun VisualizerNodeDto.toNodeInfo(): NodeInfo =
     NodeInfo(

@@ -3,26 +3,30 @@ package app.node.ui.components
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.node.ui.theme.NodeColors
 
 @Composable
 fun ControlPanel(
-    onRequestCS: () -> Unit,
-    onReleaseCS: () -> Unit,
+    onWithdraw: (Long) -> Unit,
+    onDeposit: (Long) -> Unit,
     enabled: Boolean,
-    releaseEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
+    var withdrawAmount by remember { mutableStateOf("") }
+    var depositAmount by remember { mutableStateOf("") }
+    
     Card(
         modifier = modifier
             .shadow(
@@ -53,30 +57,91 @@ fun ControlPanel(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Control Panel",
+                    text = "Bank Transaction",
                     style = MaterialTheme.typography.h6,
                     fontWeight = FontWeight.Bold,
                     color = NodeColors.TextPrimary
                 )
             }
             
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // Withdraw section
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
             ) {
-                PrimaryButton(
-                    text = "Request CS",
-                    onClick = onRequestCS,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f)
+                Text(
+                    text = "Withdraw",
+                    style = MaterialTheme.typography.subtitle2,
+                    fontWeight = FontWeight.Medium,
+                    color = NodeColors.TextSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
-                SecondaryButton(
-                    text = "Release CS",
-                    onClick = onReleaseCS,
-                    enabled = releaseEnabled,
-                    modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = withdrawAmount,
+                        onValueChange = { withdrawAmount = it.filter { char -> char.isDigit() } },
+                        label = { Text("Amount") },
+                        enabled = enabled,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    PrimaryButton(
+                        text = "Withdraw",
+                        onClick = {
+                            val amount = withdrawAmount.toLongOrNull() ?: 0L
+                            if (amount > 0) {
+                                onWithdraw(amount)
+                                withdrawAmount = ""
+                            }
+                        },
+                        enabled = enabled && withdrawAmount.toLongOrNull()?.let { it > 0 } == true,
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    )
+                }
+            }
+            
+            // Deposit section
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Deposit",
+                    style = MaterialTheme.typography.subtitle2,
+                    fontWeight = FontWeight.Medium,
+                    color = NodeColors.TextSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = depositAmount,
+                        onValueChange = { depositAmount = it.filter { char -> char.isDigit() } },
+                        label = { Text("Amount") },
+                        enabled = enabled,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    SecondaryButton(
+                        text = "Deposit",
+                        onClick = {
+                            val amount = depositAmount.toLongOrNull() ?: 0L
+                            if (amount > 0) {
+                                onDeposit(amount)
+                                depositAmount = ""
+                            }
+                        },
+                        enabled = enabled && depositAmount.toLongOrNull()?.let { it > 0 } == true,
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    )
+                }
             }
         }
     }

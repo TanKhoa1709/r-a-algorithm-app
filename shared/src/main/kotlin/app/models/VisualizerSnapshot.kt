@@ -19,8 +19,9 @@ data class VisualizerMetricsDto(
 data class VisualizerSnapshot(
     val nodes: List<VisualizerNodeDto>,
     val currentHolder: String? = null,
-    val queue: List<String> = emptyList(),
+    val queue: List<String> = emptyList(),  // Deprecated - không còn queue
     val accessHistory: List<CSEntry> = emptyList(),
-    val metrics: VisualizerMetricsDto = VisualizerMetricsDto()
+    val metrics: VisualizerMetricsDto = VisualizerMetricsDto(),
+    val bankBalance: Long = 0L  // Current bank balance
 )
 

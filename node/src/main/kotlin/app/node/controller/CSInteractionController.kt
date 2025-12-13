@@ -1,10 +1,12 @@
 package app.node.controller
 
 import app.models.CSState
+import app.models.TransactionRequest
+import app.models.TransactionResult
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
@@ -23,16 +25,14 @@ class CSInteractionController(private val csHostUrl: String) {
     }
 
     suspend fun getState(): CSState {
-        val response = client.get("$csHostUrl/api/state")
-        return Json.decodeFromString<CSState>(response.bodyAsText())
+        return client.get("$csHostUrl/api/state").body()
     }
 
     suspend fun requestAccess(nodeId: String, requestId: String): Boolean {
-        val response = client.post("$csHostUrl/api/request") {
+        val result: Map<String, Boolean> = client.post("$csHostUrl/api/request") {
             contentType(ContentType.Application.Json)
             setBody(mapOf("nodeId" to nodeId, "requestId" to requestId))
-        }
-        val result = Json.decodeFromString<Map<String, Boolean>>(response.bodyAsText())
+        }.body()
         return result["granted"] ?: false
     }
 
@@ -55,6 +55,34 @@ class CSInteractionController(private val csHostUrl: String) {
             contentType(ContentType.Application.Json)
             setBody(mapOf("nodeId" to nodeId, "requestId" to requestId))
         }
+    }
+    
+    /**
+     * Withdraw money from bank account
+     */
+    suspend fun withdraw(nodeId: String, requestId: String, amount: Long): TransactionResult {
+        return client.post("$csHostUrl/api/bank/withdraw") {
+            contentType(ContentType.Application.Json)
+            setBody(TransactionRequest(nodeId, requestId, amount))
+        }.body()
+    }
+    
+    /**
+     * Deposit money to bank account
+     */
+    suspend fun deposit(nodeId: String, requestId: String, amount: Long): TransactionResult {
+        return client.post("$csHostUrl/api/bank/deposit") {
+            contentType(ContentType.Application.Json)
+            setBody(TransactionRequest(nodeId, requestId, amount))
+        }.body()
+    }
+    
+    /**
+     * Get current bank balance
+     */
+    suspend fun getBalance(): Long {
+        val result: Map<String, Long> = client.get("$csHostUrl/api/bank/balance").body()
+        return result["balance"] ?: 0L
     }
 
     fun close() {
