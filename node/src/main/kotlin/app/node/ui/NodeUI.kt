@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,14 +23,23 @@ import kotlinx.coroutines.launch
  * Main UI for the node application
  */
 @Composable
-fun NodeUI(controller: NodeController) {
+fun NodeUI(
+    controller: NodeController,
+    currentCsHostUrl: String,
+    onUpdateCsHostUrl: (String) -> Unit
+) {
     var inCS by remember { mutableStateOf(false) }
     var clock by remember { mutableStateOf(0L) }
     var csState by remember { mutableStateOf<CSState?>(null) }
     val scope = rememberCoroutineScope()
-    
+
     var hasPendingRequest by remember { mutableStateOf(false) }
-    
+
+    // State cho phần chỉnh CS Host
+    var editing by remember { mutableStateOf(false) }
+    var csHostUrlText by remember { mutableStateOf(currentCsHostUrl) }
+    var showRestartHint by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         // Seed state via HTTP API once
         scope.launch {
@@ -43,7 +53,7 @@ fun NodeUI(controller: NodeController) {
             kotlinx.coroutines.delay(100)
         }
     }
-    
+
     // Main container with gradient background
     Box(
         modifier = Modifier
@@ -101,9 +111,105 @@ fun NodeUI(controller: NodeController) {
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(28.dp))
-            
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // edit CS HOST url
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "CS Host",
+                        style = MaterialTheme.typography.caption,
+                        color = NodeColors.TextMuted
+                    )
+                    Text(
+                        text = csHostUrlText,
+                        style = MaterialTheme.typography.body2,
+                        color = NodeColors.TextPrimary
+                    )
+                    if (showRestartHint) {
+                        Text(
+                            text = "Close and reopen the application if you want to use the newly saved CS Host url.",
+                            style = MaterialTheme.typography.caption,
+                            color = Color(0xFFB00020)
+                        )
+                    }
+                }
+
+                TextButton(
+                    onClick = {
+                        editing = !editing
+                        showRestartHint = false
+                        csHostUrlText = currentCsHostUrl
+                    }
+                ) {
+                    Text(
+                        text = if (editing) "Cancel" else "Edit CS Host url",
+                        color = NodeColors.Primary
+                    )
+                }
+            }
+
+            if (editing) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = csHostUrlText,
+                            onValueChange = { csHostUrlText = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("CS Host URL") },
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    editing = false
+                                    csHostUrlText = currentCsHostUrl
+                                }
+                            ) {
+                                Text("Cancel")
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    val trimmed = csHostUrlText.trim()
+                                    if (trimmed.isNotEmpty()) {
+                                        onUpdateCsHostUrl(trimmed)
+                                        showRestartHint = true
+                                        editing = false
+                                    }
+                                },
+                                enabled = csHostUrlText.isNotBlank(),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Text("Save")
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
@@ -115,35 +221,34 @@ fun NodeUI(controller: NodeController) {
                     modifier = Modifier.weight(1f)
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(20.dp))
-            
+
             ControlPanel(
                 onRequestCS = {
                     try {
                         controller.requestCriticalSection()
-                        // State will be updated by LaunchedEffect
-                    } catch (e: Exception) {
-                        // Handle error
+                        // state update qua LaunchedEffect
+                    } catch (_: Exception) {
                     }
                 },
                 onReleaseCS = {
                     try {
                         controller.releaseCriticalSection()
-                        // State will be updated by LaunchedEffect
-                    } catch (e: Exception) {
-                        // Handle error
+                    } catch (_: Exception) {
                     }
                 },
                 enabled = !inCS && !hasPendingRequest,
                 releaseEnabled = inCS,
                 modifier = Modifier.fillMaxWidth()
             )
-            
+
             Spacer(modifier = Modifier.height(20.dp))
-            
+
             Row(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 LogPanel(

@@ -8,6 +8,7 @@ import app.models.NodeConfig as SharedNodeConfig
 data class NodeConfig(
     val sharedConfig: SharedNodeConfig,
     val uiEnabled: Boolean = true,
-    val autoConnect: Boolean = true
+    val autoConnect: Boolean = true,
+    val configPath: String
 )
 

@@ -82,7 +82,7 @@ private fun resolveHost(rawHost: String): String {
 }
 
 fun main(args: Array<String>) {
-    val configPath = args.getOrNull(0) ?: "config/nodes/node2.json"
+    val configPath = args.getOrNull(0) ?: "config/nodes/node1.json"
     val configFile = File(configPath)
 
     val rawSharedConfig = if (configFile.exists()) {
@@ -98,16 +98,17 @@ fun main(args: Array<String>) {
 
     val resolvedHost = resolveHost(rawSharedConfig.host)
     val sharedConfig = rawSharedConfig.copy(host = resolvedHost)
-    
+
     val nodeConfig = NodeConfig(
         sharedConfig = sharedConfig,
         uiEnabled = true,
-        autoConnect = true
+        autoConnect = true,
+        configPath = configPath
     )
-    
+
     val app = NodeApplication(nodeConfig)
     app.start()
-    
+
     if (nodeConfig.uiEnabled) {
         application {
             Window(
@@ -118,7 +119,13 @@ fun main(args: Array<String>) {
                 title = "Ricart-Agrawala Node: ${sharedConfig.nodeId}"
             ) {
                 NodeTheme {
-                    NodeUI(app.getController())
+                    NodeUI(
+                        app.getController(),
+                        currentCsHostUrl = sharedConfig.csHostUrl,
+                        onUpdateCsHostUrl = { newUrl ->
+                            app.updateCsHostUrl(newUrl)
+                        }
+                    )
                 }
             }
         }

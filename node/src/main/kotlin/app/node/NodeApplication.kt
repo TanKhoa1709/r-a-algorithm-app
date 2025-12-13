@@ -1,7 +1,6 @@
 package app.node
 
 import app.core.RicartAgrawala
-import app.models.NodeConfig as SharedNodeConfig
 import app.net.discovery.NodeAnnouncer
 import app.net.discovery.ServiceDiscovery
 import app.net.discovery.DiscoveryConfig
@@ -11,9 +10,9 @@ import app.node.controller.CSInteractionController
 import app.node.controller.MessageHandler
 import app.node.controller.NodeController
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
 
 /**
  * Main orchestrator for the node application
@@ -28,21 +27,21 @@ class NodeApplication(private val config: NodeConfig) {
     private var csHostWebSocketClient: CSHostWebSocketClient? = null
     private lateinit var controller: NodeController
     private val messageHandler = MessageHandler()
-    
+
     fun start() {
         val sharedConfig = config.sharedConfig
-        
+
         csInteractionController = CSInteractionController(sharedConfig.csHostUrl)
         // Initialize network components
         connectionManager = ConnectionManager { _, message ->
             handleMessage(message)
         }
-        
+
         webSocketServer = WebSocketServer(sharedConfig.port) { _, message ->
             handleMessage(message)
         }
         webSocketServer.start()
-        
+
         // Initialize controller first with a temporary ricartAgrawala
         // We'll replace it after creating the real one
         val tempRicartAgrawala = RicartAgrawala(
@@ -59,7 +58,7 @@ class NodeApplication(private val config: NodeConfig) {
             csInteractionController,
             sharedConfig
         )
-        
+
         // Now create the real ricartAgrawala with proper callbacks
         ricartAgrawala = RicartAgrawala(
             nodeId = sharedConfig.nodeId,
@@ -96,7 +95,7 @@ class NodeApplication(private val config: NodeConfig) {
                 }
             }
         )
-        
+
         // Recreate controller with the real ricartAgrawala
         controller = NodeController(
             ricartAgrawala,
@@ -104,12 +103,12 @@ class NodeApplication(private val config: NodeConfig) {
             csInteractionController,
             sharedConfig
         )
-        
+
         // Initialize service discovery
         val discoveryConfig = DiscoveryConfig()
         nodeAnnouncer = NodeAnnouncer(discoveryConfig, sharedConfig)
         nodeAnnouncer.start()
-        
+
         serviceDiscovery = ServiceDiscovery(
             discoveryConfig,
             onNodeDiscovered = { nodeConfig ->
@@ -130,7 +129,8 @@ class NodeApplication(private val config: NodeConfig) {
         serviceDiscovery.start()
 
         // Start CS Host websocket subscription and seed initial state
-        csHostWebSocketClient = CSHostWebSocketClient(sharedConfig.csHostUrl,
+        csHostWebSocketClient = CSHostWebSocketClient(
+            sharedConfig.csHostUrl,
             onState = { state -> controller.updateCsHostState(state) },
             onError = { ex -> println("CS Host WS error: ${ex.message}") }
         ).also { it.start() }
@@ -139,7 +139,7 @@ class NodeApplication(private val config: NodeConfig) {
             controller.updateCsHostState(initial)
         }
     }
-    
+
     fun stop() {
         nodeAnnouncer.stop()
         serviceDiscovery.stop()
@@ -150,37 +150,63 @@ class NodeApplication(private val config: NodeConfig) {
             csHostWebSocketClient?.stop()
         }
     }
-    
+
     fun getController(): NodeController = controller
-    
+
     private fun handleMessage(message: String) {
         messageHandler.handleMessage(
             message,
-            onRequest = { ramessage -> 
+            onRequest = { ramessage ->
                 controller.logIncomingRequest(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
-                ricartAgrawala.handleRequest(ramessage) 
+                ricartAgrawala.handleRequest(ramessage)
             },
-            onReply = { ramessage -> 
+            onReply = { ramessage ->
                 controller.logIncomingReply(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
-                ricartAgrawala.handleReply(ramessage) 
+                ricartAgrawala.handleReply(ramessage)
             },
-            onRelease = { ramessage -> 
+            onRelease = { ramessage ->
                 controller.logIncomingRelease(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
-                ricartAgrawala.handleRelease(ramessage) 
+                ricartAgrawala.handleRelease(ramessage)
             }
         )
     }
-    
+
     private fun broadcastMessage(message: String) {
         runBlocking {
             connectionManager.broadcast(message)
         }
     }
-    
+
     private fun sendToNode(nodeId: String, message: String) {
         runBlocking {
             connectionManager.sendToNode(nodeId, message)
         }
     }
-}
 
+    fun updateCsHostUrl(newUrl: String) {
+        try {
+            val file = File(config.configPath)
+
+            // Json dùng để đọc & ghi file config
+            val json = Json {
+                prettyPrint = true
+                encodeDefaults = true
+            }
+
+            val rawConfig = if (file.exists()) {
+                json.decodeFromString<app.models.NodeConfig>(file.readText())
+            } else {
+                // fallback: nếu file bị mất thì lấy config hiện tại
+                config.sharedConfig
+            }
+
+            val updated = rawConfig.copy(csHostUrl = newUrl)
+
+            // Ghi lại ra file
+            val newText = json.encodeToString(app.models.NodeConfig.serializer(), updated)
+            file.writeText(newText)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+}
