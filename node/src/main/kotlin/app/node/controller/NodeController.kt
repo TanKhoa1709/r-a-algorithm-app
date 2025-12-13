@@ -48,10 +48,8 @@ class NodeController(
         pendingTransactionAmount = amount
         transactionResult = kotlinx.coroutines.CompletableDeferred()
         
-        // Request CS via Ricart-Agrawala
+        // Request CS via Ricart-Agrawala (chưa log ở đây, sẽ log khi đã nhận đủ replies và vào CS)
         currentRequestId = ricartAgrawala.requestCriticalSection()
-        eventLogger.info("Requested CS for withdraw", 
-            mapOf("requestId" to currentRequestId!!, "amount" to amount.toString(), "timestamp" to ricartAgrawala.getClock().toString()))
         
         // Wait for transaction to complete (will be completed in onEnterCriticalSection)
         return transactionResult!!.await()
@@ -77,10 +75,8 @@ class NodeController(
         pendingTransactionAmount = amount
         transactionResult = kotlinx.coroutines.CompletableDeferred()
         
-        // Request CS via Ricart-Agrawala
+        // Request CS via Ricart-Agrawala (chưa log ở đây, sẽ log khi đã nhận đủ replies và vào CS)
         currentRequestId = ricartAgrawala.requestCriticalSection()
-        eventLogger.info("Requested CS for deposit", 
-            mapOf("requestId" to currentRequestId!!, "amount" to amount.toString(), "timestamp" to ricartAgrawala.getClock().toString()))
         
         // Wait for transaction to complete (will be completed in onEnterCriticalSection)
         return transactionResult!!.await()
@@ -151,8 +147,6 @@ class NodeController(
         
         // Enter CS khi Ricart-Agrawala algorithm cho phép (đã nhận đủ replies)
         inCriticalSection = true
-        eventLogger.success("Entered critical section", 
-            mapOf("requestId" to (currentRequestId ?: "unknown"), "clock" to ricartAgrawala.getClock().toString()))
         
         // Thực hiện transaction (withdraw/deposit) trong coroutine
         CoroutineScope(Dispatchers.Default).launch {
@@ -162,6 +156,10 @@ class NodeController(
                 val requestId = currentRequestId
                 
                 if (transactionType != null && amount != null && requestId != null) {
+                    // Log khi đã nhận đủ replies và vào CS (đúng logic: chỉ log khi đã vào CS)
+                    eventLogger.success("Entered CS for $transactionType", 
+                        mapOf("requestId" to requestId, "amount" to amount.toString(), "clock" to ricartAgrawala.getClock().toString()))
+                    
                     // Thực hiện transaction trên CS Host
                     val result = when (transactionType) {
                         "WITHDRAW" -> {
