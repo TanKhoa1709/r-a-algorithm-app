@@ -230,34 +230,4 @@ class NodeApplication(private val config: NodeConfig) {
         }
     }
 
-    fun updateCsHostUrl(newUrl: String) {
-        try {
-            val file = File(config.configPath)
-
-            // Json dùng để đọc & ghi file config
-            val json = Json {
-                prettyPrint = true
-                encodeDefaults = true   // ghi luôn cả các field có default
-            }
-
-            // Đọc lại config gốc từ file (giữ nguyên host = "auto", discoveryPort,...)
-            val rawConfig = if (file.exists()) {
-                json.decodeFromString<app.models.NodeConfig>(file.readText())
-            } else {
-                // fallback: nếu file bị mất thì lấy config hiện tại
-                config.sharedConfig
-            }
-
-            // Chỉ thay đổi csHostUrl, các field khác giữ nguyên
-            val updated = rawConfig.copy(csHostUrl = newUrl)
-
-            // Ghi lại ra file
-            val newText = json.encodeToString(app.models.NodeConfig.serializer(), updated)
-            file.writeText(newText)
-
-            println("Updated csHostUrl to $newUrl in ${file.absolutePath}")
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
 }

@@ -28,8 +28,8 @@ fun Application.configureWebSocketHandler(csHost: CSHost) {
                 // Handle incoming messages (keep connection alive)
                 for (frame in incoming) {
                     if (frame is Frame.Text) {
-                        val message = frame.readText()
                         // Handle WebSocket messages if needed
+                        frame.readText() // Consume frame
                     }
                 }
             } catch (e: Exception) {
@@ -42,6 +42,10 @@ fun Application.configureWebSocketHandler(csHost: CSHost) {
             // đăng ký session
             VisualizerBroadcaster.register(this)
             try {
+                // Gửi snapshot ngay khi visualizer connect để có balance ban đầu
+                val snapshot = csHost.buildSnapshot()
+                send(Frame.Text(Json.encodeToString(snapshot)))
+                
                 // nếu visualizer không gửi gì, có thể chỉ cần giữ connection
                 // và đọc/ignore frame cho tới khi client đóng
                 for (frame in incoming) {

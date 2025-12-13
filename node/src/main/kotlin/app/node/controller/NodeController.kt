@@ -128,9 +128,7 @@ class NodeController(
         if (previousState?.currentHolder == config.nodeId && 
             state.currentHolder != config.nodeId && 
             inCriticalSection) {
-            // Lost access unexpectedly, exit CS
-            eventLogger.error("Lost CS access unexpectedly", 
-                mapOf("previousHolder" to config.nodeId, "newHolder" to (state.currentHolder ?: "none")))
+            // Lost access unexpectedly, exit CS (không log)
             onExitCriticalSection()
         }
     }
@@ -181,17 +179,23 @@ class NodeController(
                         eventLogger.success("Transaction successful", 
                             mapOf("type" to transactionType, "amount" to amount.toString(), "balance" to result.balance.toString()))
                     } else {
-                        eventLogger.error("Transaction failed", 
-                            mapOf("type" to transactionType, "amount" to amount.toString(), "message" to result.message))
+                        // Transaction failed (có thể là insufficient balance cho withdraw)
+                        if (transactionType == "WITHDRAW") {
+                            eventLogger.warning("Withdraw failed: Insufficient balance", 
+                                mapOf("amount" to amount.toString(), "currentBalance" to result.balance.toString(), "message" to result.message))
+                        } else {
+                            eventLogger.error("Transaction failed", 
+                                mapOf("type" to transactionType, "amount" to amount.toString(), "message" to result.message))
+                        }
                     }
                     
-                    // Sleep 5 seconds
+                    // Sleep 5 seconds (ngay cả khi transaction fail)
                     delay(5000)
                     
                     // Complete transaction result
                     transactionResult?.complete(result)
                     
-                    // Release CS
+                    // Release CS (ngay cả khi transaction fail - node đã vào CS và thử transaction)
                     releaseCriticalSection()
                 }
             } catch (e: Exception) {

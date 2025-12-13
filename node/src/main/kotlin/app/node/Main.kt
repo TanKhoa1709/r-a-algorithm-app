@@ -82,7 +82,7 @@ private fun resolveHost(rawHost: String): String {
 }
 
 fun main(args: Array<String>) {
-    val configPath = args.getOrNull(0) ?: "config/nodes/node1.json"
+    val configPath = args.getOrNull(0) ?: "config/nodes/node2.json"
     val configFile = File(configPath)
 
     val rawSharedConfig = if (configFile.exists()) {
@@ -116,16 +116,10 @@ fun main(args: Array<String>) {
                     app.stop()
                     exitApplication()
                 },
-                title = "Ricart-Agrawala Node: ${sharedConfig.nodeId}"
+                title = "Bank Branch: ${sharedConfig.nodeId}"
             ) {
                 NodeTheme {
-                    NodeUI(
-                        app.getController(),
-                        currentCsHostUrl = sharedConfig.csHostUrl,
-                        onUpdateCsHostUrl = { newUrl ->
-                            app.updateCsHostUrl(newUrl)
-                        }
-                    )
+                    NodeUI(app.getController())
                 }
             }
         }

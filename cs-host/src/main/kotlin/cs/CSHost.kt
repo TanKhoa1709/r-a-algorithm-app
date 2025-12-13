@@ -189,11 +189,12 @@ class CSHost(
             return TransactionResult(success = false, message = "Resource not available", balance = bankAccount.getBalance())
         }
         
-        // Thực hiện withdraw
+        // Thực hiện withdraw - chỉ rút được nếu đủ tiền
+        val currentBalance = bankAccount.getBalance()
         val success = bankAccount.withdraw(amount)
         val newBalance = bankAccount.getBalance()
         
-        // Ghi log lịch sử
+        // Ghi log lịch sử (ghi cả khi fail để track)
         val transactionEntry = CSEntry(
             nodeId = nodeId,
             requestId = requestId,
@@ -212,7 +213,11 @@ class CSHost(
         
         return TransactionResult(
             success = success,
-            message = if (success) "Withdrew $amount, new balance: $newBalance" else "Insufficient balance",
+            message = if (success) {
+                "Withdrew $amount, new balance: $newBalance"
+            } else {
+                "Insufficient balance. Current balance: $currentBalance, requested: $amount"
+            },
             balance = newBalance
         )
     }
@@ -273,7 +278,7 @@ class CSHost(
     /**
      * Xây snapshot gửi cho visualizer
      */
-    private fun buildSnapshot(): VisualizerSnapshot {
+    fun buildSnapshot(): VisualizerSnapshot {
         val state = getState()
         val history = getAccessHistory()
 

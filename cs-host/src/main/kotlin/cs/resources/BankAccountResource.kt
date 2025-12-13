@@ -44,21 +44,26 @@ class BankAccountResource(
     
     /**
      * Withdraw money from account
+     * Chỉ rút được nếu số dư >= số tiền muốn rút
      * @return true if successful, false if insufficient balance
      */
     fun withdraw(amount: Long): Boolean {
         if (amount <= 0) return false
-        var success = false
-        balance.updateAndGet { current ->
-            if (current >= amount) {
-                success = true
-                current - amount
-            } else {
-                success = false
-                current
+        
+        // Sử dụng compareAndSet để đảm bảo thread-safe
+        while (true) {
+            val current = balance.get()
+            if (current < amount) {
+                // Không đủ tiền
+                return false
             }
+            // Thử trừ tiền
+            if (balance.compareAndSet(current, current - amount)) {
+                // Thành công
+                return true
+            }
+            // Nếu compareAndSet fail, retry (có thể balance đã thay đổi)
         }
-        return success
     }
     
     /**

@@ -7,8 +7,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,7 +21,6 @@ import app.node.ui.theme.NodeColors
 fun StatusBar(
     inCriticalSection: Boolean,
     clock: Long,
-    csState: app.models.CSState?,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -106,7 +103,7 @@ fun StatusBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Clock:",
+                    "Lamport Clock:",
                     style = MaterialTheme.typography.body1,
                     color = NodeColors.TextSecondary
                 )
@@ -117,98 +114,6 @@ fun StatusBar(
                     ),
                     color = NodeColors.TextPrimary
                 )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = NodeColors.Divider, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(12.dp))
-
-            csState?.let { state ->
-                // Host Locked status with icon
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = if (state.isLocked) NodeColors.Warning else NodeColors.TextMuted,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            "Host Locked:",
-                            style = MaterialTheme.typography.body1,
-                            color = NodeColors.TextSecondary
-                        )
-                    }
-                    Text(
-                        text = if (state.isLocked) "YES (${state.currentHolder ?: "?"})" else "NO",
-                        style = MaterialTheme.typography.body1.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = if (state.isLocked) NodeColors.Warning else NodeColors.TextPrimary
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(10.dp))
-                
-                // Queue display
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Queue: ",
-                        style = MaterialTheme.typography.body2,
-                        color = NodeColors.TextSecondary
-                    )
-                    Text(
-                        text = if (state.queue.isEmpty()) "[]" else state.queue.joinToString(", "),
-                        style = MaterialTheme.typography.body2.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = NodeColors.TextPrimary
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(6.dp))
-                
-                // Total accesses
-                Text(
-                    text = "Total accesses: ${state.totalAccesses}",
-                    style = MaterialTheme.typography.body2,
-                    color = NodeColors.TextSecondary
-                )
-                
-                // Violations with warning style
-                if (state.violations.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(NodeColors.ErrorLight)
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = NodeColors.Error,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Violations: ${state.violations.size}",
-                            color = NodeColors.Error,
-                            style = MaterialTheme.typography.body2.copy(
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        )
-                    }
-                }
             }
         }
     }

@@ -9,14 +9,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.node.controller.NodeController
 import app.node.ui.components.*
 import app.node.ui.theme.NodeColors
-import app.models.CSState
 import kotlinx.coroutines.launch
 
 /**
@@ -24,32 +22,18 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun NodeUI(
-    controller: NodeController,
-    currentCsHostUrl: String,
-    onUpdateCsHostUrl: (String) -> Unit
+    controller: NodeController
 ) {
     var inCS by remember { mutableStateOf(false) }
     var clock by remember { mutableStateOf(0L) }
-    var csState by remember { mutableStateOf<CSState?>(null) }
     val scope = rememberCoroutineScope()
-
     var hasPendingRequest by remember { mutableStateOf(false) }
 
-    // State cho phần chỉnh CS Host
-    var editing by remember { mutableStateOf(false) }
-    var csHostUrlText by remember { mutableStateOf(currentCsHostUrl) }
-    var showRestartHint by remember { mutableStateOf(false) }
-
     LaunchedEffect(Unit) {
-        // Seed state via HTTP API once
-        scope.launch {
-            runCatching { controller.refreshCsHostState() }
-        }
         while (true) {
             clock = controller.getClock()
             inCS = controller.isInCriticalSection()
             hasPendingRequest = controller.hasPendingRequest()
-            csState = controller.getCsHostState()
             kotlinx.coroutines.delay(100)
         }
     }
@@ -96,7 +80,7 @@ fun NodeUI(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Ricart-Agrawala Node",
+                        text = "Bank Branch",
                         style = MaterialTheme.typography.h4.copy(
                             fontSize = 26.sp,
                             letterSpacing = (-0.5).sp
@@ -105,122 +89,21 @@ fun NodeUI(
                         color = NodeColors.TextPrimary
                     )
                     Text(
-                        text = "Distributed Mutual Exclusion",
+                        text = "Distributed Bank System",
                         style = MaterialTheme.typography.caption,
                         color = NodeColors.TextMuted
                     )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // edit CS HOST url
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "CS Host",
-                        style = MaterialTheme.typography.caption,
-                        color = NodeColors.TextMuted
-                    )
-                    Text(
-                        text = csHostUrlText,
-                        style = MaterialTheme.typography.body2,
-                        color = NodeColors.TextPrimary
-                    )
-                    if (showRestartHint) {
-                        Text(
-                            text = "Close and reopen the application if you want to use the newly saved CS Host url.",
-                            style = MaterialTheme.typography.caption,
-                            color = Color(0xFFB00020)
-                        )
-                    }
-                }
-
-                TextButton(
-                    onClick = {
-                        editing = !editing
-                        showRestartHint = false
-                        csHostUrlText = currentCsHostUrl
-                    }
-                ) {
-                    Text(
-                        text = if (editing) "Cancel" else "Edit CS Host url",
-                        color = NodeColors.Primary
-                    )
-                }
-            }
-
-            if (editing) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = csHostUrlText,
-                            onValueChange = { csHostUrlText = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("CS Host URL") },
-                            singleLine = true
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    editing = false
-                                    csHostUrlText = currentCsHostUrl
-                                }
-                            ) {
-                                Text("Cancel")
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    val trimmed = csHostUrlText.trim()
-                                    if (trimmed.isNotEmpty()) {
-                                        onUpdateCsHostUrl(trimmed)
-                                        showRestartHint = true
-                                        editing = false
-                                    }
-                                },
-                                enabled = csHostUrlText.isNotBlank(),
-                                shape = RoundedCornerShape(20.dp)
-                            ) {
-                                Text("Save")
-                            }
-                        }
-                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                StatusBar(
-                    inCriticalSection = inCS,
-                    clock = clock,
-                    csState = csState,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            // Status Bar - simplified
+            StatusBar(
+                inCriticalSection = inCS,
+                clock = clock,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -258,7 +141,7 @@ fun NodeUI(
                 LogPanel(
                     entries = controller.eventLogger.getEntries(),
                     eventLogger = controller.eventLogger,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(2f)
                 )
                 PeersList(
                     peers = controller.getConnectedNodes(),

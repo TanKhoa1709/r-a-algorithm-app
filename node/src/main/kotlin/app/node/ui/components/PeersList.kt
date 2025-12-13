@@ -56,7 +56,7 @@ fun PeersList(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Connected Peers",
+                    text = "Other Branches",
                     style = MaterialTheme.typography.h6,
                     fontWeight = FontWeight.Bold,
                     color = NodeColors.TextPrimary
@@ -81,7 +81,7 @@ fun PeersList(
             
             if (peers.isEmpty()) {
                 Text(
-                    text = "No peers connected",
+                    text = "No other branches connected",
                     style = MaterialTheme.typography.body2,
                     color = NodeColors.TextMuted
                 )
