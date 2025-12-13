@@ -30,16 +30,14 @@ class NodeApplication(private val config: NodeConfig) {
     private val messageHandler = MessageHandler()
     private lateinit var sharedConfig: SharedNodeConfig
     
-    // Track để tránh log trùng lặp khi broadcast
     private var lastSentRequestId: String? = null
     private var lastSentReleaseId: String? = null
-    private val processedMessages = mutableSetOf<String>() // Track processed incoming messages (max 1000)
+    private val processedMessages = mutableSetOf<String>()
     
     fun start() {
         sharedConfig = config.sharedConfig
         
         csInteractionController = CSInteractionController(sharedConfig.csHostUrl)
-        // Initialize network components
         connectionManager = ConnectionManager { _, message ->
             handleMessage(message)
         }
@@ -49,8 +47,6 @@ class NodeApplication(private val config: NodeConfig) {
         }
         webSocketServer.start()
         
-        // Initialize controller first with a temporary ricartAgrawala
-        // We'll replace it after creating the real one
         val tempRicartAgrawala = RicartAgrawala(
             nodeId = sharedConfig.nodeId,
             onSendRequest = { },
@@ -66,13 +62,9 @@ class NodeApplication(private val config: NodeConfig) {
             sharedConfig
         )
         
-        // Now create the real ricartAgrawala with proper callbacks
-        
         ricartAgrawala = RicartAgrawala(
             nodeId = sharedConfig.nodeId,
             onSendRequest = { message ->
-                // Chỉ log 1 lần cho mỗi requestId (tránh spam khi broadcast đến nhiều nodes)
-                // onSendRequest được gọi nhiều lần (cho mỗi node), nhưng message giống nhau
                 if (::controller.isInitialized && lastSentRequestId != message.requestId) {
                     controller.logSendingRequest(message.requestId, message.timestamp)
                     lastSentRequestId = message.requestId
@@ -81,16 +73,13 @@ class NodeApplication(private val config: NodeConfig) {
                 broadcastMessage(Json.encodeToString(protocol))
             },
             onSendReply = { message, targetNodeId ->
-                // Reply chỉ gửi đến 1 node, nên log bình thường
                 if (::controller.isInitialized) {
                     controller.logSendingReply(targetNodeId, message.requestId, message.timestamp)
                 }
                 val protocol = app.proto.CSProtocol.fromMessage(message)
-                // Send reply to the original requester (targetNodeId), not the sender
                 sendToNode(targetNodeId, Json.encodeToString(protocol))
             },
             onSendRelease = { message ->
-                // Chỉ log 1 lần cho mỗi releaseId (tránh spam khi broadcast đến nhiều nodes)
                 if (::controller.isInitialized && lastSentReleaseId != message.requestId) {
                     controller.logSendingRelease(message.requestId, message.timestamp)
                     lastSentReleaseId = message.requestId
@@ -110,7 +99,6 @@ class NodeApplication(private val config: NodeConfig) {
             }
         )
         
-        // Recreate controller with the real ricartAgrawala
         controller = NodeController(
             ricartAgrawala,
             connectionManager,
@@ -118,7 +106,6 @@ class NodeApplication(private val config: NodeConfig) {
             sharedConfig
         )
         
-        // Initialize service discovery
         val discoveryConfig = DiscoveryConfig()
         nodeAnnouncer = NodeAnnouncer(discoveryConfig, sharedConfig)
         nodeAnnouncer.start()
@@ -142,7 +129,6 @@ class NodeApplication(private val config: NodeConfig) {
         )
         serviceDiscovery.start()
 
-        // Start CS Host websocket subscription and seed initial state
         csHostWebSocketClient = CSHostWebSocketClient(sharedConfig.csHostUrl,
             onState = { state -> controller.updateCsHostState(state) },
             onError = { ex -> println("CS Host WS error: ${ex.message}") }
@@ -170,25 +156,19 @@ class NodeApplication(private val config: NodeConfig) {
         messageHandler.handleMessage(
             message,
             onRequest = { ramessage -> 
-                // KHÔNG log và xử lý nếu là message từ chính mình (tránh loopback)
                 if (ramessage.nodeId != sharedConfig.nodeId) {
-                    // Deduplicate: chỉ log 1 lần cho mỗi message (tránh duplicate messages từ network)
                     val messageKey = "REQUEST:${ramessage.nodeId}:${ramessage.requestId}:${ramessage.timestamp}"
                     if (processedMessages.add(messageKey)) {
                         controller.logIncomingRequest(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
-                        // Giới hạn size để tránh memory leak
                         if (processedMessages.size > 1000) {
                             processedMessages.clear()
                         }
                     }
                     ricartAgrawala.handleRequest(ramessage)
                 }
-                // Ignore own messages
             },
             onReply = { ramessage -> 
-                // KHÔNG log và xử lý nếu là message từ chính mình
                 if (ramessage.nodeId != sharedConfig.nodeId) {
-                    // Deduplicate: chỉ log 1 lần cho mỗi message
                     val messageKey = "REPLY:${ramessage.nodeId}:${ramessage.requestId}:${ramessage.timestamp}"
                     if (processedMessages.add(messageKey)) {
                         controller.logIncomingReply(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
@@ -198,12 +178,9 @@ class NodeApplication(private val config: NodeConfig) {
                     }
                     ricartAgrawala.handleReply(ramessage)
                 }
-                // Ignore own messages
             },
             onRelease = { ramessage -> 
-                // KHÔNG log và xử lý nếu là message từ chính mình
                 if (ramessage.nodeId != sharedConfig.nodeId) {
-                    // Deduplicate: chỉ log 1 lần cho mỗi message
                     val messageKey = "RELEASE:${ramessage.nodeId}:${ramessage.requestId}:${ramessage.timestamp}"
                     if (processedMessages.add(messageKey)) {
                         controller.logIncomingRelease(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
@@ -213,7 +190,6 @@ class NodeApplication(private val config: NodeConfig) {
                     }
                     ricartAgrawala.handleRelease(ramessage)
                 }
-                // Ignore own messages
             }
         )
     }

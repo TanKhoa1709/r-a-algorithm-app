@@ -10,7 +10,6 @@ import java.util.UUID
 class RicartAgrawala(
     private val nodeId: String,
     private val onSendRequest: (RAMessage) -> Unit,
-    // Second parameter is the destination node that should receive the reply
     private val onSendReply: (RAMessage, String) -> Unit,
     private val onSendRelease: (RAMessage) -> Unit,
     private val onEnterCS: () -> Unit,
@@ -49,8 +48,8 @@ class RicartAgrawala(
         state.requesting = true
         state.requestTimestamp = timestamp
         state.requestId = requestId
-        state.hasEnteredCS = false  // Reset khi request mới
-        state.repliedRequests.clear()  // Clear replied requests khi request mới
+        state.hasEnteredCS = false
+        state.repliedRequests.clear()
         
         val request = RAMessage(
             type = MsgType.REQUEST,
@@ -59,19 +58,16 @@ class RicartAgrawala(
             requestId = requestId
         )
         
-        // Initialize set of nodes we're waiting for replies from
         val otherNodes = allNodes.filter { it != nodeId }
         state.deferredReplies.clear()
         state.deferredReplies.addAll(otherNodes)
         
-        // Send request to all other nodes
         allNodes.forEach { targetNode ->
             if (targetNode != nodeId) {
                 onSendRequest(request)
             }
         }
         
-        // Check if we can enter immediately (no other nodes)
         checkAndEnterCS()
         
         return requestId
@@ -85,16 +81,14 @@ class RicartAgrawala(
         state.lamportClock.receive(request.timestamp)
         
         if (request.nodeId == nodeId) {
-            return // Ignore own requests
+            return
         }
         
-        // Check if we've already replied to this request (tránh gửi reply nhiều lần)
         val requestKey = "${request.nodeId}:${request.requestId}"
         val alreadyReplied = state.repliedRequests.contains(requestKey)
         val alreadyDeferred = state.pendingRequests.containsKey(request.nodeId) && 
                               state.pendingRequests[request.nodeId]?.requestId == request.requestId
         
-        // Nếu đã reply hoặc đã defer, không xử lý lại
         if (alreadyReplied || alreadyDeferred) {
             return
         }
