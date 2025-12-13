@@ -30,7 +30,6 @@ fun main() = application {
         }
     }
 
-    // Kết nối tới cs-host
     LaunchedEffect(Unit) {
         client.connect("ws://localhost:8080/visualizer")
     }
@@ -39,7 +38,7 @@ fun main() = application {
         onCloseRequest = {
             client.close()
             exitApplication()
-        }, title = "R&A CS Visualizer", state = WindowState(width = 1200.dp, height = 700.dp)
+        }, title = "Bank Dashboard", state = WindowState(width = 1200.dp, height = 700.dp)
     ) {
         VisualizerScreen(uiState)
     }

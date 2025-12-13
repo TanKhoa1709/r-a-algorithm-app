@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Ricart-Agrawala Distributed Mutual Exclusion Demo is a multi-module Kotlin application that demonstrates the Ricart-Agrawala algorithm for distributed mutual exclusion.
+The Ricart-Agrawala Distributed Banking System is a multi-module Kotlin application that demonstrates the Ricart-Agrawala algorithm for distributed mutual exclusion in a practical banking scenario. Multiple bank branches coordinate access to a shared bank account using the distributed algorithm.
 
 ## Module Structure
 
@@ -24,40 +24,43 @@ Provides network communication layer:
 - HttpServer/Client: REST API and fallback communication
 
 ### cs-host
-Critical Section Host that manages shared resources (Resource Manager, NOT a coordinator):
-- CSHost: Resource manager (manages actual shared resources, NOT a coordinator for the algorithm)
-- ResourceManager: Manages shared resources
-- AccessMonitor: Monitors access patterns
+Bank Host that manages the shared bank account (Resource Manager, NOT a coordinator):
+- CSHost: Bank resource manager (manages the shared bank account, NOT a coordinator for the algorithm)
+- ResourceManager: Manages bank account and other resources
+- BankAccountResource: Shared bank account with withdraw/deposit operations
+- AccessMonitor: Monitors transaction patterns
 - ViolationDetector: Detects protocol violations
-- REST API: HTTP endpoints for state and control
+- REST API: HTTP endpoints for bank transactions and state
 
 ### node
-Node application that participates in the distributed system:
+Bank branch application that participates in the distributed banking system:
 - NodeApplication: Main orchestrator
-- NodeController: Business logic
-- NodeUI: Desktop UI using Compose
+- NodeController: Business logic for bank transactions
+- NodeUI: Desktop UI for branch operations (withdraw/deposit)
 
 ### visualizer
-Advanced visualization tool:
-- Real-time state monitoring
-- Resource visualization
-- Timeline and statistics
-- Network topology
+Bank Dashboard for real-time monitoring:
+- Current bank balance display
+- Transaction history
+- Branch status and activity
+- Bank statistics (total transactions, withdrawals, deposits)
 
 ### common-ui
 Shared UI components used by node and visualizer modules.
 
 ## Communication Flow
 
-1. Nodes discover each other via multicast service discovery
-2. Nodes establish WebSocket connections for real-time communication
-3. When a node wants to enter CS:
-   - Sends REQUEST message to all other nodes (Ricart-Agrawala algorithm)
-   - Waits for REPLY from all nodes
+1. Bank branches discover each other via multicast service discovery
+2. Branches establish WebSocket connections for real-time communication
+3. When a branch wants to perform a transaction (withdraw/deposit):
+   - User initiates withdraw/deposit operation
+   - Branch sends REQUEST message to all other branches (Ricart-Agrawala algorithm)
+   - Waits for REPLY from all branches
    - Enters CS when all replies received (Ricart-Agrawala decides)
-   - **After entering CS**, requests resource access from CS Host
-   - Sends RELEASE when exiting CS
-4. CS Host manages actual resource access and monitors for violations (NOT a coordinator - just resource management)
+   - **After entering CS**, executes transaction on Bank Host (withdraw/deposit)
+   - Bank Host processes transaction and updates balance
+   - Branch sends RELEASE when exiting CS
+4. Bank Host manages the actual bank account and transaction history (NOT a coordinator - just resource management)
 
 ## Technology Stack
 

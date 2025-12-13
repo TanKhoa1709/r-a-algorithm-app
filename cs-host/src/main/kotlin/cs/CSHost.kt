@@ -27,11 +27,11 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Critical Section Host - Resource Manager (NOT a coordinator)
+ * Bank Host - Resource Manager (NOT a coordinator)
  * 
- * CS Host chỉ quản lý tài nguyên dùng chung (resources), KHÔNG phải coordinator của Ricart-Agrawala algorithm.
- * Ricart-Agrawala algorithm chạy distributed giữa các nodes để quyết định thứ tự vào CS.
- * CS Host chỉ đảm bảo mutual exclusion ở tầng resource access.
+ * Bank Host manages the shared bank account and other resources, NOT a coordinator for Ricart-Agrawala algorithm.
+ * Ricart-Agrawala algorithm runs distributed between branches to decide CS access order.
+ * Bank Host only ensures mutual exclusion at the resource access layer.
  */
 class CSHost(
     private val config: CSHostConfig,

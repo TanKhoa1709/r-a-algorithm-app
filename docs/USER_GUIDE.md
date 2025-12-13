@@ -14,43 +14,48 @@
 
 ### Running Components
 
-#### Start CS Host
+#### Start Bank Host
 ```bash
 ./scripts/start-cs-host.sh
 ```
 
-#### Start a Node
+The Bank Host will start on `http://localhost:8080` with an initial balance of 100,000.
+
+#### Start Bank Branches
 ```bash
+# Terminal 1 - Branch 1
 ./scripts/start-node.sh config/nodes/node1.json
+
+# Terminal 2 - Branch 2
+./scripts/start-node.sh config/nodes/node2.json
+
+# Terminal 3 - Branch 3
+./scripts/start-node.sh config/nodes/node3.json
 ```
 
-#### Start Visualizer
+#### Start Bank Dashboard
 ```bash
 ./scripts/start-visualizer.sh
 ```
 
-#### Run Full Demo
-```bash
-./scripts/demo-scenario.sh
-```
+## Using the Branch UI
 
-## Using the Node UI
+1. **Withdraw**: Enter amount and click "Withdraw" to withdraw money from the shared bank account
+2. **Deposit**: Enter amount and click "Deposit" to deposit money to the shared bank account
+3. **Status Bar**: Shows current CS status (IN CS / IDLE) and Lamport clock value
+4. **Event Log**: Displays transaction events and Ricart-Agrawala messages
+5. **Other Branches**: Shows connected branches
 
-1. **Request CS**: Click "Request CS" to request access to the critical section
-2. **Release CS**: Click "Release CS" to exit the critical section
-3. **Status Bar**: Shows current CS status and Lamport clock value
-4. **Event Log**: Displays recent events
-5. **Peers List**: Shows connected nodes
+**Note**: You can only perform transactions when the branch is not in CS and has no pending requests.
 
-## Using the Visualizer
+## Using the Bank Dashboard
 
-The visualizer provides multiple views:
+The Bank Dashboard provides:
 
-- **Dashboard**: Overview of system state
-- **Resources**: View and monitor shared resources
-- **Timeline**: Access history timeline
-- **Network**: Network topology visualization
-- **Statistics**: Performance metrics and charts
+- **Current Balance**: Large display of current bank balance
+- **Transaction History**: Complete list of all transactions (withdrawals and deposits)
+- **Bank Statistics**: Total transactions, withdrawals, deposits, and amounts
+- **Branch Status**: Real-time status of all branches
 
 ## Configuration
 
@@ -69,7 +74,13 @@ If you get port conflicts, modify the port numbers in configuration files.
 - Check firewall settings
 - Verify discovery port (default: 8888) is not blocked
 
-### CS Host Not Responding
-- Check if CS Host is running on port 8080
-- Verify the URL in node configuration files
+### Bank Host Not Responding
+- Check if Bank Host is running on port 8080
+- Verify the URL in branch configuration files
+- Transaction will be cancelled automatically if connection fails
+
+### Transaction Fails
+- **Insufficient Balance**: Withdrawal will fail if balance is less than requested amount
+- **Connection Error**: Transaction will be cancelled if Bank Host is unreachable
+- Check event log for detailed error messages
 

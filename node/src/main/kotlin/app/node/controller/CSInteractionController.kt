@@ -12,7 +12,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
 /**
- * Controller for interacting with CS Host
+ * Controller for interacting with Bank Host
  */
 class CSInteractionController(private val csHostUrl: String) {
     private val client = HttpClient(CIO) {

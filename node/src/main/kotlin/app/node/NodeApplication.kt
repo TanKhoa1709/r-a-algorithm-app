@@ -135,7 +135,7 @@ class NodeApplication(private val config: NodeConfig) {
 
         csHostWebSocketClient = CSHostWebSocketClient(sharedConfig.csHostUrl,
             onState = { state -> controller.updateCsHostState(state) },
-            onError = { ex -> println("CS Host WS error: ${ex.message}") }
+            onError = { ex -> println("Bank Host WS error: ${ex.message}") }
         ).also { it.start() }
         runCatching {
             val initial = runBlocking { csInteractionController.getState() }

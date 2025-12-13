@@ -1,23 +1,25 @@
-# Ricart-Agrawala Distributed Mutual Exclusion
+# Ricart-Agrawala Distributed Banking System
 
-A comprehensive implementation and demonstration of the **Ricart-Agrawala algorithm** for distributed mutual exclusion, featuring a multi-module Kotlin architecture with real-time network communication, critical section management, and desktop UI visualization.
+A comprehensive implementation and demonstration of the **Ricart-Agrawala algorithm** for distributed mutual exclusion, featuring a distributed banking system where multiple bank branches coordinate access to a shared bank account using message passing and logical clocks (Lamport clocks).
 
 ## Overview
 
-This project implements the Ricart-Agrawala algorithm, a distributed algorithm that ensures mutual exclusion in a distributed system without requiring a central coordinator. The system consists of multiple nodes that coordinate access to shared resources using message passing and logical clocks (Lamport clocks).
+This project implements the Ricart-Agrawala algorithm in a practical banking scenario. Multiple bank branches (nodes) coordinate access to a shared bank account using the distributed mutual exclusion algorithm. Each branch can withdraw or deposit money, with the algorithm ensuring that only one branch accesses the account at a time.
 
-**Important Note**: The Ricart-Agrawala algorithm itself is fully distributed - nodes coordinate directly with each other via message passing. The CS Host (Critical Section Host) is an **optional resource management layer** that manages actual shared resources (like bank accounts, printers, etc.) and is NOT a coordinator for the Ricart-Agrawala algorithm. The algorithm runs independently between nodes.
+**Important Note**: The Ricart-Agrawala algorithm itself is fully distributed - bank branches coordinate directly with each other via message passing. The Bank Host (formerly called CS Host) is an **optional resource management layer** that manages the actual shared bank account and is NOT a coordinator for the Ricart-Agrawala algorithm. The algorithm runs independently between branches to decide access order.
 
 ### Key Features
 
+- **Distributed Banking System**: Bank branches coordinate access to shared bank account using Ricart-Agrawala algorithm
+- **Bank Transactions**: Withdraw and deposit operations with mutual exclusion guarantee
 - **Distributed Mutual Exclusion**: Full implementation of Ricart-Agrawala algorithm (pure distributed, no central coordinator)
 - **Service Discovery**: Automatic node discovery via UDP multicast
 - **Real-time Communication**: WebSocket-based message passing between nodes
-- **Critical Section Host**: Optional resource management layer for managing actual shared resources (NOT a coordinator for the algorithm)
-- **Desktop UI**: Compose Desktop UI for node visualization and control
+- **Bank Host**: Resource management layer for managing the shared bank account (NOT a coordinator for the algorithm)
+- **Desktop UI**: Compose Desktop UI for branch operations and monitoring
+- **Bank Dashboard**: Real-time visualization of bank balance, transactions, and branch status
 - **Lamport Clocks**: Logical clock implementation for event ordering
-- **Violation Detection**: Automatic detection of protocol violations
-- **Resource Management**: Multiple shared resource types (Bank Account, Printer, Document, Counter)
+- **Transaction History**: Complete audit trail of all bank transactions
 
 ## Prerequisites
 
@@ -35,17 +37,17 @@ cd ricart-agrawala
 ./gradlew build
 ```
 
-### 2. Start Critical Section Host
+### 2. Start Bank Host
 
 ```bash
 ./scripts/start-cs-host.sh
 ```
 
-The CS Host will start on `http://localhost:8080` by default.
+The Bank Host will start on `http://localhost:8080` by default with an initial balance of 100,000.
 
-### 3. Start Nodes
+### 3. Start Bank Branches
 
-In separate terminals, start multiple nodes:
+In separate terminals, start multiple bank branches:
 
 ```bash
 # Terminal 1
@@ -60,12 +62,25 @@ In separate terminals, start multiple nodes:
 
 ### 4. Use the UI
 
-Each node will open a desktop window where you can:
+Each branch (node) will open a desktop window where you can:
 
-- **Request CS**: Request access to the critical section
-- **Release CS**: Release the critical section
+- **Withdraw**: Withdraw money from the shared bank account
+- **Deposit**: Deposit money to the shared bank account
 - **View Status**: See current CS status and Lamport clock value
-- **Monitor Peers**: View connected nodes
+- **Monitor Transactions**: View transaction history in event log
+- **View Other Branches**: See connected branches
+
+### 5. Start Bank Dashboard (Visualizer)
+
+```bash
+./scripts/start-visualizer.sh
+```
+
+The Bank Dashboard will show:
+- Current bank balance
+- Transaction history
+- Branch status and activity
+- Bank statistics
 
 ## Project Structure
 
@@ -85,20 +100,20 @@ ricart-agrawala/
 │   ├── models/       # Data models (NodeConfig, CSState, etc.)
 │   └── proto/        # Message protocols (RAMessage, CSProtocol)
 │
-├── cs-host/          # Critical Section Host (Resource Manager)
-│   ├── CSHost.kt     # Resource manager (NOT a coordinator)
-│   ├── resources/    # Shared resource implementations
+├── cs-host/          # Bank Host (Resource Manager)
+│   ├── CSHost.kt     # Bank resource manager (NOT a coordinator)
+│   ├── resources/    # Bank account and other resources
 │   ├── monitor/      # Monitoring and violation detection
 │   └── api/          # REST API and WebSocket handlers
 │
-├── node/             # Node application
+├── node/             # Bank Branch application
 │   ├── NodeApplication.kt
-│   ├── controller/   # Business logic
-│   └── ui/           # Desktop UI (Compose)
+│   ├── controller/   # Business logic for bank transactions
+│   └── ui/           # Desktop UI (Compose) for branch operations
 │
 ├── config/           # Configuration files
-│   ├── nodes/        # Node configurations
-│   └── cs-host/      # CS Host configuration
+│   ├── nodes/        # Bank branch configurations
+│   └── cs-host/      # Bank Host configuration
 │
 └── docs/             # Documentation
     ├── ARCHITECTURE.md
@@ -126,7 +141,7 @@ Edit `config/nodes/node*.json`:
 }
 ```
 
-### CS Host Configuration
+### Bank Host Configuration
 
 Edit `config/cs-host/cs-host-config.json`:
 
@@ -151,22 +166,24 @@ The system has **two layers**:
    - No central coordinator required
    - Pure distributed mutual exclusion
 
-2. **CS Host Layer** (Optional Resource Manager):
-   - Manages actual shared resources (bank accounts, printers, etc.)
-   - Provides resource access control and monitoring
+2. **Bank Host Layer** (Optional Resource Manager):
+   - Manages the shared bank account
+   - Provides transaction processing and balance management
    - NOT a coordinator for the algorithm - just a resource management service
 
-### Ricart-Agrawala Algorithm Flow
+### Ricart-Agrawala Algorithm Flow (Banking Context)
 
-1. **Request Phase**: Node sends `REQUEST` message to all other nodes with its Lamport timestamp
-2. **Reply Phase**: Other nodes reply immediately if:
+1. **Transaction Request**: Branch initiates withdraw/deposit operation
+2. **Request Phase**: Node sends `REQUEST` message to all other branches with its Lamport timestamp
+3. **Reply Phase**: Other branches reply immediately if:
    - They're not requesting CS, OR
    - They're requesting but have lower priority (higher timestamp or lower nodeId)
-3. **Enter CS**: Node enters CS when it receives `REPLY` from all other nodes (Ricart-Agrawala algorithm decides)
-4. **Resource Access**: **After entering CS**, node requests resource access from CS Host (optional - only for actual resource management)
-5. **Release Phase**: Node sends `RELEASE` message when exiting CS, and replies to any pending requests
+4. **Enter CS**: Branch enters CS when it receives `REPLY` from all other branches (Ricart-Agrawala algorithm decides)
+5. **Bank Transaction**: **After entering CS**, branch executes transaction on Bank Host (withdraw/deposit)
+6. **Transaction Processing**: Bank Host processes transaction and updates balance
+7. **Release Phase**: Branch sends `RELEASE` message when exiting CS, and replies to any pending requests
 
-**Important**: The Ricart-Agrawala algorithm runs independently between nodes and decides who enters CS. CS Host is **NOT** involved in this decision - it's only consulted **after** a node has already entered CS (according to Ricart-Agrawala) for actual resource access management.
+**Important**: The Ricart-Agrawala algorithm runs independently between branches and decides who accesses the bank account. Bank Host is **NOT** involved in this decision - it's only consulted **after** a branch has already entered CS (according to Ricart-Agrawala) for actual bank transaction processing.
 
 ### Message Types
 
@@ -190,10 +207,8 @@ Each node maintains a logical clock that:
 ## 📚 Documentation
 
 - **[Architecture](docs/ARCHITECTURE.md)**: System architecture overview
-- **[Network Architecture](docs/NETWORK_ARCHITECTURE.md)**: Detailed network layer documentation
-- **[RA State Explanation](docs/RA_STATE_EXPLANATION.md)**: Understanding RAState
-- **[API Documentation](docs/API.md)**: REST API endpoints
-- **[User Guide](docs/USER_GUIDE.md)**: Detailed usage instructions
+- **[API Documentation](docs/API.md)**: REST API endpoints for bank operations
+- **[User Guide](docs/USER_GUIDE.md)**: Detailed usage instructions for banking system
 
 ## Development
 
@@ -210,7 +225,7 @@ Each node maintains a logical clock that:
 ### Running in Development Mode
 
 ```bash
-# Run CS Host
+# Run Bank Host
 ./gradlew :cs-host:run
 
 # Run Node with custom config
@@ -232,11 +247,12 @@ If you encounter port conflicts:
 - **Firewall**: Verify firewall allows UDP on discovery port (default: 8888)
 - **Network**: Ensure all nodes are on the same network segment
 
-### CS Host Not Responding
+### Bank Host Not Responding
 
-- Verify CS Host is running: `curl http://localhost:8080/api/state`
+- Verify Bank Host is running: `curl http://localhost:8080/api/state`
 - Check port 8080 is not blocked
-- Verify `csHostUrl` in node configurations
+- Verify `csHostUrl` in branch configurations
+- Transactions will be automatically cancelled if connection fails
 
 ## Technology Stack
 

@@ -13,7 +13,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
- * WebSocket handler for real-time CS Host updates
+ * WebSocket handler for real-time Bank Host updates
  */
 fun Application.configureWebSocketHandler(csHost: CSHost) {
     routing {

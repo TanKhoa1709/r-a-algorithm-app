@@ -28,12 +28,14 @@ fun NodeUI(
     var clock by remember { mutableStateOf(0L) }
     val scope = rememberCoroutineScope()
     var hasPendingRequest by remember { mutableStateOf(false) }
+    var connectedPeers by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     LaunchedEffect(Unit) {
         while (true) {
             clock = controller.getClock()
             inCS = controller.isInCriticalSection()
             hasPendingRequest = controller.hasPendingRequest()
+            connectedPeers = controller.getConnectedNodes()
             kotlinx.coroutines.delay(100)
         }
     }
@@ -144,7 +146,7 @@ fun NodeUI(
                     modifier = Modifier.weight(2f)
                 )
                 PeersList(
-                    peers = controller.getConnectedNodes(),
+                    peers = connectedPeers,
                     modifier = Modifier.weight(1f)
                 )
             }

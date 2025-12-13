@@ -133,9 +133,9 @@ class NodeController(
                                                errorMsg.contains("unreachable", ignoreCase = true)
                         
                         if (isConnectionError) {
-                            eventLogger.error("CS Host connection failed - Cancelling transaction", 
+                            eventLogger.error("Bank Host connection failed - Cancelling transaction", 
                                 mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg))
-                            transactionResult?.complete(TransactionResult(success = false, message = "CS Host connection failed: $errorMsg", balance = 0L))
+                            transactionResult?.complete(TransactionResult(success = false, message = "Bank Host connection failed: $errorMsg", balance = 0L))
                             releaseCriticalSection()
                             return@launch
                         } else {

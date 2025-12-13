@@ -13,7 +13,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
- * REST API routes for CS Host
+ * REST API routes for Bank Host
  */
 fun Application.configureCSRoutes(csHost: CSHost) {
     routing {

@@ -16,7 +16,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
 /**
- * Lightweight WebSocket client to subscribe to CS Host realtime updates.
+ * Lightweight WebSocket client to subscribe to Bank Host realtime updates.
  */
 class CSHostWebSocketClient(
     private val csHostUrl: String,
