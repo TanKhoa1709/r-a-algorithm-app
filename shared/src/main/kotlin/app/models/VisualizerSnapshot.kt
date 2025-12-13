@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class VisualizerNodeDto(
     val id: String,
-    val state: String      // "IDLE" | "WANTED" | "HELD"
+    val state: String      // "IDLE" | "REQUESTING" | "WAITING_REPLIES" | "IN_CS" | "HELD"
 )
 
 @Serializable

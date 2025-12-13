@@ -39,24 +39,9 @@ class NodeController(
         eventLogger.info("Requested critical section", 
             mapOf("requestId" to currentRequestId!!, "timestamp" to ricartAgrawala.getClock().toString()))
         
-        // Ask CS Host; if granted immediately, access resource now
-        // If queued, will be handled when CSState update arrives
-        val granted = runBlocking {
-            csInteractionController.requestAccess(config.nodeId, currentRequestId!!)
-        }
-        if (granted) {
-            eventLogger.success("CS Host granted access immediately", 
-                mapOf("requestId" to currentRequestId!!))
-            // Access default resource as part of CS entry coordination
-            runBlocking {
-                csInteractionController.accessResource("counter", config.nodeId, currentRequestId!!)
-            }
-            // Will enter CS when Ricart-Agrawala algorithm allows (after receiving all replies)
-        } else {
-            eventLogger.warning("CS Host queued request", 
-                mapOf("requestId" to currentRequestId!!, "queuePosition" to "pending"))
-        }
-        // If not granted (queued), wait for CSState update to detect when granted
+        // Note: KHÔNG request CS Host ở đây
+        // CS Host chỉ được gọi SAU KHI đã vào CS (khi Ricart-Agrawala cho phép)
+        // Ricart-Agrawala algorithm quyết định thứ tự vào CS (distributed)
         return currentRequestId!!
     }
     
@@ -112,43 +97,12 @@ class NodeController(
         val previousState = csHostState
         csHostState = state
         
-        // Log queue position changes
-        val wasInQueue = previousState?.queue?.contains(config.nodeId) ?: false
-        val isInQueue = state.queue.contains(config.nodeId)
-        val queuePosition = if (isInQueue) {
-            state.queue.indexOf(config.nodeId) + 1
-        } else null
+        // Note: KHÔNG có queue nữa - CS Host không phải coordinator
+        // Ricart-Agrawala algorithm quyết định thứ tự vào CS (distributed)
         
-        if (!wasInQueue && isInQueue) {
-            eventLogger.info("Added to CS queue", mapOf("position" to queuePosition.toString()))
-        } else if (wasInQueue && !isInQueue && queuePosition != null) {
-            eventLogger.info("Removed from CS queue", mapOf("previousPosition" to queuePosition.toString()))
-        } else if (isInQueue && queuePosition != null) {
-            eventLogger.info("Queue position updated", mapOf("position" to queuePosition.toString()))
-        }
-        
-        // Check if this node was just granted access from queue
-        // This happens when CSHost grants access to next node in queue after previous holder releases
-        if (state.currentHolder == config.nodeId && 
-            !inCriticalSection && 
-            currentRequestId != null &&
-            (previousState == null || previousState.currentHolder != config.nodeId)) {
-            // Node was just granted access from queue
-            eventLogger.success("CS Host granted access from queue", 
-                mapOf("requestId" to currentRequestId!!))
-            // Access resource and enter CS
-            runBlocking {
-                csInteractionController.accessResource("counter", config.nodeId, currentRequestId!!)
-            }
-            // Note: inCriticalSection will be set to true by onEnterCriticalSection()
-            // which is called by RicartAgrawala when all replies are received
-            // But if we already have all replies (deferredReplies empty), we can enter now
-            val raState = ricartAgrawala.getState()
-            if (raState.deferredReplies.isEmpty() && raState.requesting) {
-                // We have all replies, can enter CS
-                onEnterCriticalSection()
-            }
-        }
+        // Note: KHÔNG có logic "granted from queue" nữa
+        // CS Host không có queue - Ricart-Agrawala algorithm quyết định thứ tự vào CS
+        // Node vào CS khi nhận đủ replies từ Ricart-Agrawala, sau đó mới request resource từ CS Host
         
         // Check if this node lost access (shouldn't happen, but handle gracefully)
         if (previousState?.currentHolder == config.nodeId && 
@@ -172,15 +126,34 @@ class NodeController(
     }
     
     fun onEnterCriticalSection() {
-        // Only enter CS if CSHost has granted access
-        // This ensures we don't enter CS before being granted from queue
-        val state = csHostState
-        if (state?.currentHolder == config.nodeId) {
-            inCriticalSection = true
-            eventLogger.success("Entered critical section", 
-                mapOf("requestId" to (currentRequestId ?: "unknown"), "clock" to ricartAgrawala.getClock().toString()))
+        // Chỉ xử lý nếu chưa vào CS (tránh enter nhiều lần)
+        if (inCriticalSection) {
+            return // Đã vào CS rồi, không xử lý lại
         }
-        // If CSHost hasn't granted yet, we'll enter when updateCsHostState detects grant
+        
+        // Enter CS khi Ricart-Agrawala algorithm cho phép (đã nhận đủ replies)
+        inCriticalSection = true
+        eventLogger.success("Entered critical section", 
+            mapOf("requestId" to (currentRequestId ?: "unknown"), "clock" to ricartAgrawala.getClock().toString()))
+        
+        // SAU KHI vào CS, request access resource từ CS Host
+        // CS Host chỉ kiểm tra resource availability, không phải coordinator
+        if (currentRequestId != null) {
+            runBlocking {
+                val granted = csInteractionController.requestAccess(config.nodeId, currentRequestId!!)
+                if (granted) {
+                    eventLogger.success("CS Host resource available", 
+                        mapOf("requestId" to currentRequestId!!))
+                    // Access default resource
+                    csInteractionController.accessResource("counter", config.nodeId, currentRequestId!!)
+                } else {
+                    eventLogger.warning("CS Host resource busy - should not happen if Ricart-Agrawala correct", 
+                        mapOf("requestId" to currentRequestId!!))
+                    // This should not happen if Ricart-Agrawala is working correctly
+                    // But we still entered CS, so log warning
+                }
+            }
+        }
     }
     
     fun onExitCriticalSection() {

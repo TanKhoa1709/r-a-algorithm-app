@@ -6,12 +6,14 @@ A comprehensive implementation and demonstration of the **Ricart-Agrawala algori
 
 This project implements the Ricart-Agrawala algorithm, a distributed algorithm that ensures mutual exclusion in a distributed system without requiring a central coordinator. The system consists of multiple nodes that coordinate access to shared resources using message passing and logical clocks (Lamport clocks).
 
+**Important Note**: The Ricart-Agrawala algorithm itself is fully distributed - nodes coordinate directly with each other via message passing. The CS Host (Critical Section Host) is an **optional resource management layer** that manages actual shared resources (like bank accounts, printers, etc.) and is NOT a coordinator for the Ricart-Agrawala algorithm. The algorithm runs independently between nodes.
+
 ### Key Features
 
-- **Distributed Mutual Exclusion**: Full implementation of Ricart-Agrawala algorithm
+- **Distributed Mutual Exclusion**: Full implementation of Ricart-Agrawala algorithm (pure distributed, no central coordinator)
 - **Service Discovery**: Automatic node discovery via UDP multicast
 - **Real-time Communication**: WebSocket-based message passing between nodes
-- **Critical Section Host**: Centralized resource management and monitoring
+- **Critical Section Host**: Optional resource management layer for managing actual shared resources (NOT a coordinator for the algorithm)
 - **Desktop UI**: Compose Desktop UI for node visualization and control
 - **Lamport Clocks**: Logical clock implementation for event ordering
 - **Violation Detection**: Automatic detection of protocol violations
@@ -29,7 +31,7 @@ This project implements the Ricart-Agrawala algorithm, a distributed algorithm t
 
 ```bash
 git clone <repository-url>
-cd r-a-algorithm-app-1
+cd ricart-agrawala
 ./gradlew build
 ```
 
@@ -68,7 +70,7 @@ Each node will open a desktop window where you can:
 ## Project Structure
 
 ```text
-r-a-algorithm-app-1/
+ricart-agrawala/
 ├── core/              # Core Ricart-Agrawala algorithm implementation
 │   ├── LamportClock.kt
 │   ├── RicartAgrawala.kt
@@ -83,8 +85,8 @@ r-a-algorithm-app-1/
 │   ├── models/       # Data models (NodeConfig, CSState, etc.)
 │   └── proto/        # Message protocols (RAMessage, CSProtocol)
 │
-├── cs-host/          # Critical Section Host
-│   ├── CSHost.kt     # Main coordinator
+├── cs-host/          # Critical Section Host (Resource Manager)
+│   ├── CSHost.kt     # Resource manager (NOT a coordinator)
 │   ├── resources/    # Shared resource implementations
 │   ├── monitor/      # Monitoring and violation detection
 │   └── api/          # REST API and WebSocket handlers
@@ -140,14 +142,31 @@ Edit `config/cs-host/cs-host-config.json`:
 
 ## 📖 How It Works
 
+### Architecture Overview
+
+The system has **two layers**:
+
+1. **Ricart-Agrawala Algorithm Layer** (Distributed):
+   - Nodes coordinate directly with each other via message passing
+   - No central coordinator required
+   - Pure distributed mutual exclusion
+
+2. **CS Host Layer** (Optional Resource Manager):
+   - Manages actual shared resources (bank accounts, printers, etc.)
+   - Provides resource access control and monitoring
+   - NOT a coordinator for the algorithm - just a resource management service
+
 ### Ricart-Agrawala Algorithm Flow
 
 1. **Request Phase**: Node sends `REQUEST` message to all other nodes with its Lamport timestamp
 2. **Reply Phase**: Other nodes reply immediately if:
    - They're not requesting CS, OR
    - They're requesting but have lower priority (higher timestamp or lower nodeId)
-3. **Enter CS**: Node enters CS when it receives `REPLY` from all other nodes
-4. **Release Phase**: Node sends `RELEASE` message when exiting CS
+3. **Enter CS**: Node enters CS when it receives `REPLY` from all other nodes (Ricart-Agrawala algorithm decides)
+4. **Resource Access**: **After entering CS**, node requests resource access from CS Host (optional - only for actual resource management)
+5. **Release Phase**: Node sends `RELEASE` message when exiting CS, and replies to any pending requests
+
+**Important**: The Ricart-Agrawala algorithm runs independently between nodes and decides who enters CS. CS Host is **NOT** involved in this decision - it's only consulted **after** a node has already entered CS (according to Ricart-Agrawala) for actual resource access management.
 
 ### Message Types
 

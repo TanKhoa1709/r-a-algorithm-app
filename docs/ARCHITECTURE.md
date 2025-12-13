@@ -24,8 +24,8 @@ Provides network communication layer:
 - HttpServer/Client: REST API and fallback communication
 
 ### cs-host
-Critical Section Host that manages shared resources:
-- CSHost: Main coordinator
+Critical Section Host that manages shared resources (Resource Manager, NOT a coordinator):
+- CSHost: Resource manager (manages actual shared resources, NOT a coordinator for the algorithm)
 - ResourceManager: Manages shared resources
 - AccessMonitor: Monitors access patterns
 - ViolationDetector: Detects protocol violations
@@ -52,11 +52,12 @@ Shared UI components used by node and visualizer modules.
 1. Nodes discover each other via multicast service discovery
 2. Nodes establish WebSocket connections for real-time communication
 3. When a node wants to enter CS:
-   - Sends REQUEST message to all other nodes
+   - Sends REQUEST message to all other nodes (Ricart-Agrawala algorithm)
    - Waits for REPLY from all nodes
-   - Enters CS when all replies received
+   - Enters CS when all replies received (Ricart-Agrawala decides)
+   - **After entering CS**, requests resource access from CS Host
    - Sends RELEASE when exiting CS
-4. CS Host manages actual resource access and monitors for violations
+4. CS Host manages actual resource access and monitors for violations (NOT a coordinator - just resource management)
 
 ## Technology Stack
 

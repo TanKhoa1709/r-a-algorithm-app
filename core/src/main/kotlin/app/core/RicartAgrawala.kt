@@ -49,6 +49,8 @@ class RicartAgrawala(
         state.requesting = true
         state.requestTimestamp = timestamp
         state.requestId = requestId
+        state.hasEnteredCS = false  // Reset khi request mới
+        state.repliedRequests.clear()  // Clear replied requests khi request mới
         
         val request = RAMessage(
             type = MsgType.REQUEST,
@@ -86,6 +88,17 @@ class RicartAgrawala(
             return // Ignore own requests
         }
         
+        // Check if we've already replied to this request (tránh gửi reply nhiều lần)
+        val requestKey = "${request.nodeId}:${request.requestId}"
+        val alreadyReplied = state.repliedRequests.contains(requestKey)
+        val alreadyDeferred = state.pendingRequests.containsKey(request.nodeId) && 
+                              state.pendingRequests[request.nodeId]?.requestId == request.requestId
+        
+        // Nếu đã reply hoặc đã defer, không xử lý lại
+        if (alreadyReplied || alreadyDeferred) {
+            return
+        }
+        
         val shouldReply = when {
             !state.requesting -> true
             state.requestTimestamp > request.timestamp -> true
@@ -102,6 +115,8 @@ class RicartAgrawala(
             )
             // Send reply directly to the requester
             onSendReply(reply, request.nodeId)
+            // Mark as replied to avoid duplicate replies
+            state.repliedRequests.add(requestKey)
         } else {
             // Defer reply
             state.addPendingRequest(request)
@@ -119,7 +134,13 @@ class RicartAgrawala(
             return // Ignore own replies
         }
         
-        if (state.requestId == reply.requestId) {
+        // Chỉ xử lý reply nếu:
+        // 1. Đang request CS
+        // 2. Reply match với requestId hiện tại
+        // 3. Node này vẫn đang trong deferredReplies (chưa được xử lý)
+        if (state.requesting && 
+            state.requestId == reply.requestId && 
+            state.deferredReplies.contains(reply.nodeId)) {
             // Remove this node from the set of nodes we're waiting for
             state.removeDeferredReply(reply.nodeId)
             checkAndEnterCS()
@@ -153,19 +174,25 @@ class RicartAgrawala(
         state.pendingRequests.clear()
         
         deferredRequests.forEach { request ->
-            val reply = RAMessage(
-                type = MsgType.REPLY,
-                timestamp = state.lamportClock.tick(),
-                nodeId = nodeId,
-                requestId = request.requestId
-            )
-            onSendReply(reply, request.nodeId)
+            val requestKey = "${request.nodeId}:${request.requestId}"
+            // Chỉ gửi reply nếu chưa reply trước đó (tránh duplicate)
+            if (!state.repliedRequests.contains(requestKey)) {
+                val reply = RAMessage(
+                    type = MsgType.REPLY,
+                    timestamp = state.lamportClock.tick(),
+                    nodeId = nodeId,
+                    requestId = request.requestId
+                )
+                onSendReply(reply, request.nodeId)
+                state.repliedRequests.add(requestKey)
+            }
         }
         
         // Reset state
         state.requesting = false
         state.requestTimestamp = 0
         state.requestId = null
+        state.hasEnteredCS = false
         state.clearDeferredReplies()
         
         onExitCS()
@@ -186,8 +213,10 @@ class RicartAgrawala(
     private fun checkAndEnterCS() {
         // We can enter CS if we're requesting and have received all replies
         // (deferredReplies contains nodes we're waiting for, so empty means we have all replies)
-        if (state.requesting && state.deferredReplies.isEmpty()) {
+        // VÀ chưa vào CS (tránh enter nhiều lần)
+        if (state.requesting && state.deferredReplies.isEmpty() && !state.hasEnteredCS) {
             // We have all replies, can enter CS
+            state.hasEnteredCS = true
             onEnterCS()
         }
     }

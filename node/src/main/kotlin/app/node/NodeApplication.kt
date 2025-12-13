@@ -1,6 +1,7 @@
 package app.node
 
 import app.core.RicartAgrawala
+import app.models.NodeConfig as SharedNodeConfig
 import app.net.discovery.NodeAnnouncer
 import app.net.discovery.ServiceDiscovery
 import app.net.discovery.DiscoveryConfig
@@ -27,21 +28,27 @@ class NodeApplication(private val config: NodeConfig) {
     private var csHostWebSocketClient: CSHostWebSocketClient? = null
     private lateinit var controller: NodeController
     private val messageHandler = MessageHandler()
-
+    private lateinit var sharedConfig: SharedNodeConfig
+    
+    // Track để tránh log trùng lặp khi broadcast
+    private var lastSentRequestId: String? = null
+    private var lastSentReleaseId: String? = null
+    private val processedMessages = mutableSetOf<String>() // Track processed incoming messages (max 1000)
+    
     fun start() {
-        val sharedConfig = config.sharedConfig
-
+        sharedConfig = config.sharedConfig
+        
         csInteractionController = CSInteractionController(sharedConfig.csHostUrl)
         // Initialize network components
         connectionManager = ConnectionManager { _, message ->
             handleMessage(message)
         }
-
+        
         webSocketServer = WebSocketServer(sharedConfig.port) { _, message ->
             handleMessage(message)
         }
         webSocketServer.start()
-
+        
         // Initialize controller first with a temporary ricartAgrawala
         // We'll replace it after creating the real one
         val tempRicartAgrawala = RicartAgrawala(
@@ -58,18 +65,23 @@ class NodeApplication(private val config: NodeConfig) {
             csInteractionController,
             sharedConfig
         )
-
+        
         // Now create the real ricartAgrawala with proper callbacks
+        
         ricartAgrawala = RicartAgrawala(
             nodeId = sharedConfig.nodeId,
             onSendRequest = { message ->
-                if (::controller.isInitialized) {
+                // Chỉ log 1 lần cho mỗi requestId (tránh spam khi broadcast đến nhiều nodes)
+                // onSendRequest được gọi nhiều lần (cho mỗi node), nhưng message giống nhau
+                if (::controller.isInitialized && lastSentRequestId != message.requestId) {
                     controller.logSendingRequest(message.requestId, message.timestamp)
+                    lastSentRequestId = message.requestId
                 }
                 val protocol = app.proto.CSProtocol.fromMessage(message)
                 broadcastMessage(Json.encodeToString(protocol))
             },
             onSendReply = { message, targetNodeId ->
+                // Reply chỉ gửi đến 1 node, nên log bình thường
                 if (::controller.isInitialized) {
                     controller.logSendingReply(targetNodeId, message.requestId, message.timestamp)
                 }
@@ -78,8 +90,10 @@ class NodeApplication(private val config: NodeConfig) {
                 sendToNode(targetNodeId, Json.encodeToString(protocol))
             },
             onSendRelease = { message ->
-                if (::controller.isInitialized) {
+                // Chỉ log 1 lần cho mỗi releaseId (tránh spam khi broadcast đến nhiều nodes)
+                if (::controller.isInitialized && lastSentReleaseId != message.requestId) {
                     controller.logSendingRelease(message.requestId, message.timestamp)
+                    lastSentReleaseId = message.requestId
                 }
                 val protocol = app.proto.CSProtocol.fromMessage(message)
                 broadcastMessage(Json.encodeToString(protocol))
@@ -95,7 +109,7 @@ class NodeApplication(private val config: NodeConfig) {
                 }
             }
         )
-
+        
         // Recreate controller with the real ricartAgrawala
         controller = NodeController(
             ricartAgrawala,
@@ -103,12 +117,12 @@ class NodeApplication(private val config: NodeConfig) {
             csInteractionController,
             sharedConfig
         )
-
+        
         // Initialize service discovery
         val discoveryConfig = DiscoveryConfig()
         nodeAnnouncer = NodeAnnouncer(discoveryConfig, sharedConfig)
         nodeAnnouncer.start()
-
+        
         serviceDiscovery = ServiceDiscovery(
             discoveryConfig,
             onNodeDiscovered = { nodeConfig ->
@@ -129,8 +143,7 @@ class NodeApplication(private val config: NodeConfig) {
         serviceDiscovery.start()
 
         // Start CS Host websocket subscription and seed initial state
-        csHostWebSocketClient = CSHostWebSocketClient(
-            sharedConfig.csHostUrl,
+        csHostWebSocketClient = CSHostWebSocketClient(sharedConfig.csHostUrl,
             onState = { state -> controller.updateCsHostState(state) },
             onError = { ex -> println("CS Host WS error: ${ex.message}") }
         ).also { it.start() }
@@ -139,7 +152,7 @@ class NodeApplication(private val config: NodeConfig) {
             controller.updateCsHostState(initial)
         }
     }
-
+    
     fun stop() {
         nodeAnnouncer.stop()
         serviceDiscovery.stop()
@@ -150,33 +163,67 @@ class NodeApplication(private val config: NodeConfig) {
             csHostWebSocketClient?.stop()
         }
     }
-
+    
     fun getController(): NodeController = controller
-
+    
     private fun handleMessage(message: String) {
         messageHandler.handleMessage(
             message,
-            onRequest = { ramessage ->
-                controller.logIncomingRequest(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
-                ricartAgrawala.handleRequest(ramessage)
+            onRequest = { ramessage -> 
+                // KHÔNG log và xử lý nếu là message từ chính mình (tránh loopback)
+                if (ramessage.nodeId != sharedConfig.nodeId) {
+                    // Deduplicate: chỉ log 1 lần cho mỗi message (tránh duplicate messages từ network)
+                    val messageKey = "REQUEST:${ramessage.nodeId}:${ramessage.requestId}:${ramessage.timestamp}"
+                    if (processedMessages.add(messageKey)) {
+                        controller.logIncomingRequest(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
+                        // Giới hạn size để tránh memory leak
+                        if (processedMessages.size > 1000) {
+                            processedMessages.clear()
+                        }
+                    }
+                    ricartAgrawala.handleRequest(ramessage)
+                }
+                // Ignore own messages
             },
-            onReply = { ramessage ->
-                controller.logIncomingReply(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
-                ricartAgrawala.handleReply(ramessage)
+            onReply = { ramessage -> 
+                // KHÔNG log và xử lý nếu là message từ chính mình
+                if (ramessage.nodeId != sharedConfig.nodeId) {
+                    // Deduplicate: chỉ log 1 lần cho mỗi message
+                    val messageKey = "REPLY:${ramessage.nodeId}:${ramessage.requestId}:${ramessage.timestamp}"
+                    if (processedMessages.add(messageKey)) {
+                        controller.logIncomingReply(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
+                        if (processedMessages.size > 1000) {
+                            processedMessages.clear()
+                        }
+                    }
+                    ricartAgrawala.handleReply(ramessage)
+                }
+                // Ignore own messages
             },
-            onRelease = { ramessage ->
-                controller.logIncomingRelease(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
-                ricartAgrawala.handleRelease(ramessage)
+            onRelease = { ramessage -> 
+                // KHÔNG log và xử lý nếu là message từ chính mình
+                if (ramessage.nodeId != sharedConfig.nodeId) {
+                    // Deduplicate: chỉ log 1 lần cho mỗi message
+                    val messageKey = "RELEASE:${ramessage.nodeId}:${ramessage.requestId}:${ramessage.timestamp}"
+                    if (processedMessages.add(messageKey)) {
+                        controller.logIncomingRelease(ramessage.nodeId, ramessage.requestId, ramessage.timestamp)
+                        if (processedMessages.size > 1000) {
+                            processedMessages.clear()
+                        }
+                    }
+                    ricartAgrawala.handleRelease(ramessage)
+                }
+                // Ignore own messages
             }
         )
     }
-
+    
     private fun broadcastMessage(message: String) {
         runBlocking {
             connectionManager.broadcast(message)
         }
     }
-
+    
     private fun sendToNode(nodeId: String, message: String) {
         runBlocking {
             connectionManager.sendToNode(nodeId, message)
@@ -190,9 +237,10 @@ class NodeApplication(private val config: NodeConfig) {
             // Json dùng để đọc & ghi file config
             val json = Json {
                 prettyPrint = true
-                encodeDefaults = true
+                encodeDefaults = true   // ghi luôn cả các field có default
             }
 
+            // Đọc lại config gốc từ file (giữ nguyên host = "auto", discoveryPort,...)
             val rawConfig = if (file.exists()) {
                 json.decodeFromString<app.models.NodeConfig>(file.readText())
             } else {
@@ -200,11 +248,14 @@ class NodeApplication(private val config: NodeConfig) {
                 config.sharedConfig
             }
 
+            // Chỉ thay đổi csHostUrl, các field khác giữ nguyên
             val updated = rawConfig.copy(csHostUrl = newUrl)
 
             // Ghi lại ra file
             val newText = json.encodeToString(app.models.NodeConfig.serializer(), updated)
             file.writeText(newText)
+
+            println("Updated csHostUrl to $newUrl in ${file.absolutePath}")
         } catch (e: Exception) {
             e.printStackTrace()
         }

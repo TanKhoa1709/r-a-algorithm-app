@@ -97,7 +97,7 @@ fun VisualizerScreen(state: VisualizerState) {
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // Cột trái: topology + queue
+                    // Cột trái: topology + algorithm info
                     Column(
                         modifier = Modifier
                             .weight(2f)
@@ -108,7 +108,7 @@ fun VisualizerScreen(state: VisualizerState) {
                             state = state,
                             modifier = Modifier.weight(1f)
                         )
-                        QueueView(
+                        AlgorithmInfoView(
                             state = state,
                             modifier = Modifier.weight(1f)
                         )
@@ -140,8 +140,8 @@ fun VisualizerScreen(state: VisualizerState) {
 private fun NodeCard(node: NodeInfo, isHolder: Boolean) {
     val (bgColor, textColor) = when (node.state) {
         NodeState.IDLE -> Pair(VisualizerColors.IdleState, VisualizerColors.IdleStateText)
-        NodeState.WANTED -> Pair(VisualizerColors.WantedState, VisualizerColors.WantedStateText)
-        NodeState.HELD -> Pair(VisualizerColors.HeldState, VisualizerColors.HeldStateText)
+        NodeState.REQUESTING, NodeState.WAITING_REPLIES -> Pair(VisualizerColors.WantedState, VisualizerColors.WantedStateText)
+        NodeState.IN_CS, NodeState.HELD -> Pair(VisualizerColors.HeldState, VisualizerColors.HeldStateText)
     }
 
     Card(
@@ -310,7 +310,7 @@ private fun TopologyView(
 }
 
 @Composable
-private fun QueueView(
+private fun AlgorithmInfoView(
     state: VisualizerState,
     modifier: Modifier = Modifier
 ) {
@@ -341,84 +341,95 @@ private fun QueueView(
                 modifier = Modifier.padding(bottom = 4.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.DateRange,
+                    imageVector = Icons.Default.Info,
                     contentDescription = null,
                     tint = VisualizerColors.Primary,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Waiting Queue",
+                    "Ricart-Agrawala Algorithm",
                     style = MaterialTheme.typography.h6,
                     fontWeight = FontWeight.Bold,
                     color = VisualizerColors.TextPrimary
                 )
-                if (state.queue.isNotEmpty()) {
-                    Spacer(Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(VisualizerColors.WantedState)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = state.queue.size.toString(),
-                            style = MaterialTheme.typography.caption,
-                            color = VisualizerColors.WantedStateText,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
             }
 
-            if (state.queue.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(VisualizerColors.SurfaceVariant)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "No node is waiting.",
-                        style = MaterialTheme.typography.body2,
-                        color = VisualizerColors.TextMuted
-                    )
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    items(state.queue.withIndex().toList()) { (index, id) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(VisualizerColors.SurfaceVariant)
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .background(VisualizerColors.Primary.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "${index + 1}",
-                                    style = MaterialTheme.typography.caption,
-                                    color = VisualizerColors.Primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
+            // Algorithm info
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(VisualizerColors.SurfaceVariant)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Distributed Mutual Exclusion",
+                    style = MaterialTheme.typography.body1,
+                    fontWeight = FontWeight.SemiBold,
+                    color = VisualizerColors.TextPrimary
+                )
+                
+                Divider(color = VisualizerColors.Divider, thickness = 1.dp)
+                
+                Text(
+                    "• No central coordinator",
+                    style = MaterialTheme.typography.body2,
+                    color = VisualizerColors.TextSecondary
+                )
+                Text(
+                    "• Nodes coordinate via REQUEST/REPLY/RELEASE",
+                    style = MaterialTheme.typography.body2,
+                    color = VisualizerColors.TextSecondary
+                )
+                Text(
+                    "• CS Host only manages resources (not coordinator)",
+                    style = MaterialTheme.typography.body2,
+                    color = VisualizerColors.TextSecondary
+                )
+                Text(
+                    "• No queue - algorithm decides order",
+                    style = MaterialTheme.typography.body2,
+                    color = VisualizerColors.TextSecondary
+                )
+                
+                Spacer(Modifier.height(8.dp))
+                
+                // Node states summary
+                val requestingCount = state.nodes.count { it.state == NodeState.REQUESTING || it.state == NodeState.WAITING_REPLIES }
+                val inCsCount = state.nodes.count { it.state == NodeState.IN_CS || it.state == NodeState.HELD }
+                
+                if (requestingCount > 0 || inCsCount > 0) {
+                    Divider(color = VisualizerColors.Divider, thickness = 1.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
                             Text(
-                                text = id,
-                                style = MaterialTheme.typography.body1,
-                                fontWeight = FontWeight.Medium,
-                                color = VisualizerColors.TextPrimary
+                                "Requesting",
+                                style = MaterialTheme.typography.caption,
+                                color = VisualizerColors.TextMuted
+                            )
+                            Text(
+                                requestingCount.toString(),
+                                style = MaterialTheme.typography.h6,
+                                fontWeight = FontWeight.Bold,
+                                color = VisualizerColors.WantedStateText
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                "In CS",
+                                style = MaterialTheme.typography.caption,
+                                color = VisualizerColors.TextMuted
+                            )
+                            Text(
+                                inCsCount.toString(),
+                                style = MaterialTheme.typography.h6,
+                                fontWeight = FontWeight.Bold,
+                                color = VisualizerColors.HeldStateText
                             )
                         }
                     }

@@ -26,15 +26,17 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Main Critical Section Host coordinator
+ * Critical Section Host - Resource Manager (NOT a coordinator)
+ * 
+ * CS Host chỉ quản lý tài nguyên dùng chung (resources), KHÔNG phải coordinator của Ricart-Agrawala algorithm.
+ * Ricart-Agrawala algorithm chạy distributed giữa các nodes để quyết định thứ tự vào CS.
+ * CS Host chỉ đảm bảo mutual exclusion ở tầng resource access.
  */
 class CSHost(
     private val config: CSHostConfig,
     private val resourceManager: ResourceManager
 ) {
-    private data class AccessRequest(val nodeId: String, val requestId: String)
-
-    private val accessQueue = ConcurrentLinkedQueue<AccessRequest>()
+    // Chỉ track node đang sử dụng resource, KHÔNG có queue
     private val currentHolder: AtomicReference<String?> = AtomicReference(null)
     private val accessHistory = ConcurrentLinkedQueue<CSEntry>()
     private val totalAccesses = AtomicLong(0)
@@ -47,20 +49,32 @@ class CSHost(
     private val violationDetector = ViolationDetector(config.enableViolationDetection)
 
     /**
-     * Request access to critical section
+     * Request access to resource (NOT coordinator - chỉ kiểm tra resource availability)
+     * 
+     * Node chỉ gọi method này SAU KHI đã vào CS theo Ricart-Agrawala algorithm.
+     * CS Host chỉ kiểm tra xem resource có đang được sử dụng không.
+     * 
+     * @return true nếu resource available, false nếu đang được sử dụng
      */
     suspend fun requestAccess(nodeId: String, requestId: String): Boolean {
-        var granted = false
-        accessMutex.withLock {
-            // Nếu node đã giữ CS hoặc đã có trong hàng đợi, không nhận thêm request mới
-            if (currentHolder.get() == nodeId || accessQueue.any { it.nodeId == nodeId }) {
-                granted = false
-            } else if (currentHolder.get() == null && accessQueue.isEmpty()) {
-                grantAccess(nodeId, requestId)
-                granted = true
-            } else {
-                accessQueue.offer(AccessRequest(nodeId, requestId))
-                granted = false
+        val granted = accessMutex.withLock {
+            // Chỉ kiểm tra xem resource có đang được sử dụng không
+            // KHÔNG có queue, KHÔNG quyết định thứ tự vào CS
+            when {
+                currentHolder.get() == null -> {
+                    // Resource available - grant access
+                    grantAccess(nodeId, requestId)
+                    true
+                }
+                currentHolder.get() == nodeId -> {
+                    // Node đã đang giữ resource (có thể là duplicate request)
+                    true
+                }
+                else -> {
+                    // Resource đang được sử dụng bởi node khác
+                    // Node phải đợi Ricart-Agrawala algorithm quyết định
+                    false
+                }
             }
         }
 
@@ -70,7 +84,7 @@ class CSHost(
     }
 
     /**
-     * Grant access to critical section
+     * Grant access to resource (record access, không phải coordinator decision)
      */
     private fun grantAccess(nodeId: String, requestId: String) {
         val entryTime = System.currentTimeMillis()
@@ -90,7 +104,10 @@ class CSHost(
     }
 
     /**
-     * Release critical section
+     * Release resource access
+     * 
+     * Node gọi method này khi exit CS.
+     * KHÔNG grant cho node tiếp theo - Ricart-Agrawala algorithm sẽ quyết định.
      */
     suspend fun releaseAccess(nodeId: String, requestId: String) {
         accessMutex.withLock {
@@ -108,12 +125,8 @@ class CSHost(
                     accessHistory.remove(it)
                     accessHistory.offer(updated)
                 }
-
-                // Grant access to next in queue
-                val nextRequest = accessQueue.poll()
-                if (nextRequest != null) {
-                    grantAccess(nextRequest.nodeId, nextRequest.requestId)
-                }
+                
+                // KHÔNG grant cho node tiếp theo - Ricart-Agrawala algorithm quyết định
             }
         }
         notifyNodes()
@@ -127,7 +140,7 @@ class CSHost(
         return CSState(
             isLocked = currentHolder.get() != null,
             currentHolder = currentHolder.get(),
-            queue = accessQueue.map { it.nodeId }.toList(),
+            queue = emptyList(), // KHÔNG có queue - Ricart-Agrawala quyết định thứ tự
             totalAccesses = totalAccesses.get(),
             violations = violations.toList()
         )
@@ -157,18 +170,16 @@ class CSHost(
         val state = getState()
         val history = getAccessHistory()
 
-        // Tạm thời suy ra danh sách node từ history + queue + currentHolder
+        // Suy ra danh sách node từ history + currentHolder (KHÔNG có queue)
         val nodeIds = buildSet {
-            addAll(state.queue)
             state.currentHolder?.let { add(it) }
             history.forEach { add(it.nodeId) }
         }
 
         val nodes = nodeIds.map { id ->
             val csState = when {
-                state.currentHolder == id -> "HELD"
-                state.queue.contains(id) -> "WANTED"
-                else -> "IDLE"
+                state.currentHolder == id -> "IN_CS"  // Node đang trong CS (theo Ricart-Agrawala) và đang access resource
+                else -> "IDLE"  // Node không trong CS hoặc đang chờ Ricart-Agrawala quyết định
             }
             VisualizerNodeDto(
                 id = id,
@@ -185,7 +196,7 @@ class CSHost(
         return VisualizerSnapshot(
             nodes = nodes,
             currentHolder = state.currentHolder,
-            queue = state.queue,
+            queue = emptyList(), // KHÔNG có queue
             accessHistory = history,
             metrics = metricsDto
         )

@@ -13,9 +13,11 @@ data class RAState(
     var requestTimestamp: Long = 0,
     var requestId: String? = null,
     val deferredReplies: MutableSet<String> = ConcurrentHashMap.newKeySet(),
-    val pendingRequests: MutableMap<String, RAMessage> = ConcurrentHashMap()
+    val pendingRequests: MutableMap<String, RAMessage> = ConcurrentHashMap(),
+    var hasEnteredCS: Boolean = false,  // Track xem đã vào CS chưa để tránh enter nhiều lần
+    val repliedRequests: MutableSet<String> = ConcurrentHashMap.newKeySet()  // Track các request đã reply (format: "nodeId:requestId")
 ) {
-    fun isInCriticalSection(): Boolean = requesting && deferredReplies.isEmpty()
+    fun isInCriticalSection(): Boolean = requesting && deferredReplies.isEmpty() && hasEnteredCS
     
     fun hasPendingRequest(): Boolean = requestId != null && requesting
     
