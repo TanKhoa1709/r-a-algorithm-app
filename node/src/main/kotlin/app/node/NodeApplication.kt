@@ -113,18 +113,22 @@ class NodeApplication(private val config: NodeConfig) {
         serviceDiscovery = ServiceDiscovery(
             discoveryConfig,
             onNodeDiscovered = { nodeConfig ->
-                ricartAgrawala.registerNode(nodeConfig.nodeId)
-                runBlocking {
-                    connectionManager.connectToNode(nodeConfig)
+                if (nodeConfig.nodeId != sharedConfig.nodeId) {
+                    ricartAgrawala.registerNode(nodeConfig.nodeId)
+                    runBlocking {
+                        connectionManager.connectToNode(nodeConfig)
+                    }
+                    controller.onNodeDiscovered(nodeConfig)
                 }
-                controller.onNodeDiscovered(nodeConfig)
             },
             onNodeLost = { nodeId ->
-                ricartAgrawala.unregisterNode(nodeId)
-                runBlocking {
-                    connectionManager.disconnectFromNode(nodeId)
+                if (nodeId != sharedConfig.nodeId) {
+                    ricartAgrawala.unregisterNode(nodeId)
+                    runBlocking {
+                        connectionManager.disconnectFromNode(nodeId)
+                    }
+                    controller.onNodeLost(nodeId)
                 }
-                controller.onNodeLost(nodeId)
             }
         )
         serviceDiscovery.start()

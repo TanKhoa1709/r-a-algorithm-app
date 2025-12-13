@@ -11,8 +11,6 @@ class BankAccountResource(
     initialBalance: Long = 100000L
 ) : SharedResource {
     private val balance = AtomicLong(initialBalance)
-    private val accessCount = AtomicLong(0)
-    private var lastAccessTime: Long? = null
     
     override suspend fun access(nodeId: String, requestId: String): ResourceAccessResult {
         return ResourceAccessResult(
@@ -29,8 +27,8 @@ class BankAccountResource(
         return ResourceState(
             resourceId = resourceId,
             currentUser = null,
-            accessCount = accessCount.get(),
-            lastAccessTime = lastAccessTime,
+            accessCount = 0,
+            lastAccessTime = null,
             metadata = metadata
         )
     }

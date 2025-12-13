@@ -33,7 +33,7 @@ fun PrimaryButton(
     
     Box(
         modifier = modifier
-            .height(52.dp)
+            .defaultMinSize(minHeight = 56.dp)
             .shadow(
                 elevation = if (enabled) 8.dp else 0.dp,
                 shape = shape,
@@ -92,7 +92,7 @@ fun SecondaryButton(
     
     Box(
         modifier = modifier
-            .height(52.dp)
+            .defaultMinSize(minHeight = 56.dp)
             .shadow(
                 elevation = if (enabled) 4.dp else 0.dp,
                 shape = shape,

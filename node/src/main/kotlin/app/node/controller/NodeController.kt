@@ -71,7 +71,7 @@ class NodeController(
         return currentRequestId != null && !inCriticalSection
     }
     
-    fun getConnectedNodes(): Set<String> = connectedNodes
+    fun getConnectedNodes(): Set<String> = connectedNodes.filter { it != config.nodeId }.toSet()
 
     fun updateCsHostState(state: CSState) {
         val previousState = csHostState
@@ -84,8 +84,6 @@ class NodeController(
         }
     }
 
-    fun getCsHostState(): CSState? = csHostState
-    
     suspend fun refreshCsHostState() {
         runCatching {
             csInteractionController.getState()
@@ -111,16 +109,40 @@ class NodeController(
                     eventLogger.success("Entered CS for $transactionType", 
                         mapOf("requestId" to requestId, "amount" to amount.toString(), "clock" to ricartAgrawala.getClock().toString()))
                     
-                    val result = when (transactionType) {
-                        "WITHDRAW" -> {
-                            eventLogger.info("Executing withdraw", mapOf("amount" to amount.toString()))
-                            csInteractionController.withdraw(config.nodeId, requestId, amount)
+                    val result = try {
+                        when (transactionType) {
+                            "WITHDRAW" -> {
+                                eventLogger.info("Executing withdraw", mapOf("amount" to amount.toString()))
+                                csInteractionController.withdraw(config.nodeId, requestId, amount)
+                            }
+                            "DEPOSIT" -> {
+                                eventLogger.info("Executing deposit", mapOf("amount" to amount.toString()))
+                                csInteractionController.deposit(config.nodeId, requestId, amount)
+                            }
+                            else -> TransactionResult(success = false, message = "Unknown transaction type", balance = 0L)
                         }
-                        "DEPOSIT" -> {
-                            eventLogger.info("Executing deposit", mapOf("amount" to amount.toString()))
-                            csInteractionController.deposit(config.nodeId, requestId, amount)
+                    } catch (e: Exception) {
+                        val errorMsg = e.message ?: "Unknown error"
+                        val errorClass = e.javaClass.simpleName
+                        val isConnectionError = errorClass.contains("Connect", ignoreCase = true) ||
+                                               errorClass.contains("Timeout", ignoreCase = true) ||
+                                               errorClass.contains("Socket", ignoreCase = true) ||
+                                               errorMsg.contains("Connection", ignoreCase = true) ||
+                                               errorMsg.contains("timeout", ignoreCase = true) ||
+                                               errorMsg.contains("refused", ignoreCase = true) ||
+                                               errorMsg.contains("unreachable", ignoreCase = true)
+                        
+                        if (isConnectionError) {
+                            eventLogger.error("CS Host connection failed - Cancelling transaction", 
+                                mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg))
+                            transactionResult?.complete(TransactionResult(success = false, message = "CS Host connection failed: $errorMsg", balance = 0L))
+                            releaseCriticalSection()
+                            return@launch
+                        } else {
+                            eventLogger.error("Transaction error", 
+                                mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg))
+                            TransactionResult(success = false, message = errorMsg, balance = 0L)
                         }
-                        else -> TransactionResult(success = false, message = "Unknown transaction type", balance = 0L)
                     }
                     
                     if (result.success) {

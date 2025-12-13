@@ -64,83 +64,97 @@ fun ControlPanel(
                 )
             }
             
-            // Withdraw section
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+            // Transaction controls - horizontal layout
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Withdraw",
-                    style = MaterialTheme.typography.subtitle2,
-                    fontWeight = FontWeight.Medium,
-                    color = NodeColors.TextSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Withdraw section
+                Column(
+                    modifier = Modifier.weight(1f)
                 ) {
-                    OutlinedTextField(
-                        value = withdrawAmount,
-                        onValueChange = { withdrawAmount = it.filter { char -> char.isDigit() } },
-                        label = { Text("Amount") },
-                        enabled = enabled,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    PrimaryButton(
+                    Text(
                         text = "Withdraw",
-                        onClick = {
-                            val amount = withdrawAmount.toLongOrNull() ?: 0L
-                            if (amount > 0) {
-                                onWithdraw(amount)
-                                withdrawAmount = ""
-                            }
-                        },
-                        enabled = enabled && withdrawAmount.toLongOrNull()?.let { it > 0 } == true,
-                        modifier = Modifier.align(Alignment.CenterVertically)
+                        style = MaterialTheme.typography.subtitle2,
+                        fontWeight = FontWeight.Medium,
+                        color = NodeColors.TextSecondary,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = withdrawAmount,
+                            onValueChange = { withdrawAmount = it.filter { char -> char.isDigit() } },
+                            label = { Text("Amount") },
+                            enabled = enabled,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        PrimaryButton(
+                            text = "Withdraw",
+                            onClick = {
+                                val amount = withdrawAmount.toLongOrNull() ?: 0L
+                                if (amount > 0) {
+                                    onWithdraw(amount)
+                                    withdrawAmount = ""
+                                }
+                            },
+                            enabled = enabled && withdrawAmount.toLongOrNull()?.let { it > 0 } == true,
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(52.dp)
+                        )
+                    }
                 }
-            }
-            
-            // Deposit section
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Deposit",
-                    style = MaterialTheme.typography.subtitle2,
-                    fontWeight = FontWeight.Medium,
-                    color = NodeColors.TextSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                
+                // Deposit section
+                Column(
+                    modifier = Modifier.weight(1f)
                 ) {
-                    OutlinedTextField(
-                        value = depositAmount,
-                        onValueChange = { depositAmount = it.filter { char -> char.isDigit() } },
-                        label = { Text("Amount") },
-                        enabled = enabled,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    SecondaryButton(
+                    Text(
                         text = "Deposit",
-                        onClick = {
-                            val amount = depositAmount.toLongOrNull() ?: 0L
-                            if (amount > 0) {
-                                onDeposit(amount)
-                                depositAmount = ""
-                            }
-                        },
-                        enabled = enabled && depositAmount.toLongOrNull()?.let { it > 0 } == true,
-                        modifier = Modifier.align(Alignment.CenterVertically)
+                        style = MaterialTheme.typography.subtitle2,
+                        fontWeight = FontWeight.Medium,
+                        color = NodeColors.TextSecondary,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = depositAmount,
+                            onValueChange = { depositAmount = it.filter { char -> char.isDigit() } },
+                            label = { Text("Amount") },
+                            enabled = enabled,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        SecondaryButton(
+                            text = "Deposit",
+                            onClick = {
+                                val amount = depositAmount.toLongOrNull() ?: 0L
+                                if (amount > 0) {
+                                    onDeposit(amount)
+                                    depositAmount = ""
+                                }
+                            },
+                            enabled = enabled && depositAmount.toLongOrNull()?.let { it > 0 } == true,
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(52.dp)
+                        )
+                    }
                 }
             }
         }
