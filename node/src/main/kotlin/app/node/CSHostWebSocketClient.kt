@@ -30,8 +30,10 @@ class CSHostWebSocketClient(
         if (job != null) return
         job = CoroutineScope(Dispatchers.IO).launch {
             val wsUrl = csHostUrl.replaceFirst("http", "ws") + "/ws/cs-host"
+            println("Connecting to Bank Host WebSocket: $wsUrl")
             runCatching {
                 client.ws(wsUrl) {
+                    println("Successfully connected to Bank Host WebSocket")
                     for (frame in incoming) {
                         if (!isActive) break
                         if (frame is Frame.Text) {
@@ -41,12 +43,20 @@ class CSHostWebSocketClient(
                             }.onSuccess { state ->
                                 onState(state)
                             }.onFailure { ex ->
+                                println("Error parsing Bank Host state: ${ex.message}")
                                 onError(ex)
                             }
                         }
                     }
                 }
             }.onFailure {
+                println("Failed to connect to Bank Host WebSocket at $wsUrl")
+                println("Error: ${it.message}")
+                if (it is java.net.ConnectException) {
+                    println("  → Connection refused. Make sure Bank Host is running and accessible at $csHostUrl")
+                } else if (it is java.net.UnknownHostException) {
+                    println("  → Unknown host. Check if the Bank Host URL is correct: $csHostUrl")
+                }
                 onError(it)
                 // Silent retry can be added later
             }

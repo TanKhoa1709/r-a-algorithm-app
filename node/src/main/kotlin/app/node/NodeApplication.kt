@@ -143,11 +143,26 @@ class NodeApplication(private val config: NodeConfig) {
 
         csHostWebSocketClient = CSHostWebSocketClient(sharedConfig.csHostUrl,
             onState = { state -> controller.updateCsHostState(state) },
-            onError = { ex -> println("Bank Host WS error: ${ex.message}") }
+            onError = { ex -> 
+                println("Bank Host WebSocket error: ${ex.message}")
+                if (ex is java.net.ConnectException) {
+                    println("  → Cannot connect to Bank Host at ${sharedConfig.csHostUrl}")
+                    println("  → Make sure Bank Host is running and accessible from this machine")
+                }
+            }
         ).also { it.start() }
         runCatching {
+            println("Fetching initial state from Bank Host at ${sharedConfig.csHostUrl}...")
             val initial = runBlocking { csInteractionController.getState() }
             controller.updateCsHostState(initial)
+            println("Successfully connected to Bank Host")
+        }.onFailure { ex ->
+            println("Failed to fetch initial state from Bank Host: ${ex.message}")
+            if (ex is java.net.ConnectException) {
+                println("  → Cannot connect to Bank Host at ${sharedConfig.csHostUrl}")
+                println("  → Make sure Bank Host is running and accessible from this machine")
+                println("  → You can override the URL using environment variable: CS_HOST_URL or BANK_HOST_URL")
+            }
         }
     }
     
