@@ -95,6 +95,12 @@ fun NodeUI(
                         style = MaterialTheme.typography.caption,
                         color = NodeColors.TextMuted
                     )
+                    Text(
+                        text = "IP: ${controller.getNodeHost()}:${controller.getNodePort()}",
+                        style = MaterialTheme.typography.caption,
+                        color = NodeColors.TextMuted,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
 

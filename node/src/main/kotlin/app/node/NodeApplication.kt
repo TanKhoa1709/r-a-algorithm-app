@@ -55,11 +55,17 @@ class NodeApplication(private val config: NodeConfig) {
             onEnterCS = { },
             onExitCS = { }
         )
+        val tempNodeConfig = app.node.NodeConfig(
+            sharedConfig = sharedConfig,
+            uiEnabled = config.uiEnabled,
+            autoConnect = config.autoConnect,
+            configPath = config.configPath
+        )
         controller = NodeController(
             tempRicartAgrawala,
             connectionManager,
             csInteractionController,
-            sharedConfig
+            tempNodeConfig
         )
         
         ricartAgrawala = RicartAgrawala(
@@ -103,7 +109,7 @@ class NodeApplication(private val config: NodeConfig) {
             ricartAgrawala,
             connectionManager,
             csInteractionController,
-            sharedConfig
+            config
         )
         
         val discoveryConfig = DiscoveryConfig(

@@ -2,9 +2,10 @@ package app.node.controller
 
 import app.core.RicartAgrawala
 import app.models.CSState
-import app.models.NodeConfig
+import app.models.NodeConfig as SharedNodeConfig
 import app.models.TransactionResult
 import app.net.websocket.ConnectionManager
+import app.node.NodeConfig
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -71,14 +72,18 @@ class NodeController(
         return currentRequestId != null && !inCriticalSection
     }
     
-    fun getConnectedNodes(): Set<String> = connectedNodes.filter { it != config.nodeId }.toSet()
+    fun getConnectedNodes(): Set<String> = connectedNodes.filter { it != config.sharedConfig.nodeId }.toSet()
+    
+    fun getNodeHost(): String = config.sharedConfig.host
+    
+    fun getNodePort(): Int = config.sharedConfig.port
 
     fun updateCsHostState(state: CSState) {
         val previousState = csHostState
         csHostState = state
         
-        if (previousState?.currentHolder == config.nodeId && 
-            state.currentHolder != config.nodeId && 
+        if (previousState?.currentHolder == config.sharedConfig.nodeId && 
+            state.currentHolder != config.sharedConfig.nodeId && 
             inCriticalSection) {
             onExitCriticalSection()
         }
@@ -113,11 +118,11 @@ class NodeController(
                         when (transactionType) {
                             "WITHDRAW" -> {
                                 eventLogger.info("Executing withdraw", mapOf("amount" to amount.toString()))
-                                csInteractionController.withdraw(config.nodeId, requestId, amount)
+                                csInteractionController.withdraw(config.sharedConfig.nodeId, requestId, amount)
                             }
                             "DEPOSIT" -> {
                                 eventLogger.info("Executing deposit", mapOf("amount" to amount.toString()))
-                                csInteractionController.deposit(config.nodeId, requestId, amount)
+                                csInteractionController.deposit(config.sharedConfig.nodeId, requestId, amount)
                             }
                             else -> TransactionResult(success = false, message = "Unknown transaction type", balance = 0L)
                         }
@@ -179,7 +184,7 @@ class NodeController(
         eventLogger.info("Releasing critical section", mapOf("requestId" to requestId))
         
         runBlocking {
-            csInteractionController.releaseAccess(config.nodeId, requestId)
+            csInteractionController.releaseAccess(config.sharedConfig.nodeId, requestId)
         }
         ricartAgrawala.releaseCriticalSection()
         eventLogger.success("Critical section released", mapOf("requestId" to requestId))
@@ -197,7 +202,7 @@ class NodeController(
         inCriticalSection = false
     }
     
-    fun onNodeDiscovered(nodeConfig: NodeConfig) {
+    fun onNodeDiscovered(nodeConfig: SharedNodeConfig) {
         val added = connectedNodes.add(nodeConfig.nodeId)
         if (added) {
             eventLogger.info(
