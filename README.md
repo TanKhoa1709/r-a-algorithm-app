@@ -251,23 +251,13 @@ If you encounter port conflicts:
 
 **When running on different machines:**
 
-1. **Check Bank Host URL in config:**
+1. **Check Bank Host URL in config file:**
    - Open your node config file (e.g., `config/nodes/node1.json`)
    - Verify `csHostUrl` points to the correct IP address of the machine running Bank Host
    - Example: `"csHostUrl": "http://192.168.1.10:8080"` (use actual IP, not `localhost`)
+   - **Note**: Bank Host URL is read ONLY from the config file, not from environment variables
 
-2. **Use environment variable override:**
-   ```bash
-   # Windows PowerShell
-   $env:CS_HOST_URL="http://192.168.1.10:8080"
-   .\gradlew :node:run
-   
-   # Linux/Mac
-   export CS_HOST_URL="http://192.168.1.10:8080"
-   ./gradlew :node:run
-   ```
-
-3. **Verify network connectivity:**
+2. **Verify network connectivity:**
    - Ensure Bank Host machine is accessible from Node machine
    - Test with: `curl http://<BANK_HOST_IP>:8080/api/state`
    - Check firewall rules allow port 8080

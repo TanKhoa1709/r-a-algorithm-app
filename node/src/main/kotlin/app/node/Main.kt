@@ -96,22 +96,15 @@ fun main(args: Array<String>) {
         )
     }
 
-    // Allow environment variable override for Bank Host URL
-    val resolvedCsHostUrl = System.getenv("CS_HOST_URL")?.takeIf { it.isNotBlank() } 
-        ?: System.getenv("BANK_HOST_URL")?.takeIf { it.isNotBlank() }
-        ?: rawSharedConfig.csHostUrl
-
+    // Only use csHostUrl from config file, no environment variable override
     val resolvedHost = resolveHost(rawSharedConfig.host)
-    val sharedConfig = rawSharedConfig.copy(
-        host = resolvedHost,
-        csHostUrl = resolvedCsHostUrl
-    )
+    val sharedConfig = rawSharedConfig.copy(host = resolvedHost)
     
     // Log configuration for debugging
     println("Node Configuration:")
     println("  Node ID: ${sharedConfig.nodeId}")
     println("  Host: ${sharedConfig.host}:${sharedConfig.port}")
-    println("  Bank Host URL: ${sharedConfig.csHostUrl}")
+    println("  Bank Host URL: ${sharedConfig.csHostUrl} (from config file)")
     println("  Config file: $configPath")
 
     val nodeConfig = NodeConfig(

@@ -161,7 +161,7 @@ class NodeApplication(private val config: NodeConfig) {
             if (ex is java.net.ConnectException) {
                 println("  → Cannot connect to Bank Host at ${sharedConfig.csHostUrl}")
                 println("  → Make sure Bank Host is running and accessible from this machine")
-                println("  → You can override the URL using environment variable: CS_HOST_URL or BANK_HOST_URL")
+                println("  → Update 'csHostUrl' in your config file: ${config.configPath}")
             }
         }
     }
