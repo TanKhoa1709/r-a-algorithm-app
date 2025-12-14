@@ -51,13 +51,13 @@ In separate terminals, start multiple bank branches:
 
 ```bash
 # Terminal 1
-./scripts/start-node.sh config/nodes/node1.json
+./scripts/start-node.sh config/nodes/node.json
 
 # Terminal 2
-./scripts/start-node.sh config/nodes/node2.json
+./scripts/start-node.sh config/nodes/node.json
 
 # Terminal 3
-./scripts/start-node.sh config/nodes/node3.json
+./scripts/start-node.sh config/nodes/node.json
 ```
 
 ### 4. Use the UI

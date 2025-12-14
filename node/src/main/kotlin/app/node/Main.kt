@@ -2,6 +2,7 @@ package app.node
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import app.models.NodeConfig as SharedNodeConfig
 import app.node.ui.theme.NodeTheme
 import app.node.ui.NodeUI
 import kotlinx.serialization.json.Json
@@ -81,19 +82,82 @@ private fun resolveHost(rawHost: String): String {
     return if (rawHost == "auto") detectLocalIp() else rawHost
 }
 
-fun main(args: Array<String>) {
-    val configPath = args.getOrNull(0) ?: "config/nodes/node1.json"
-    val configFile = File(configPath)
+/**
+ * Resolve config file path, supporting both Windows and Linux.
+ * Tries multiple locations:
+ * 1. Absolute path (if provided)
+ * 2. Relative to current working directory
+ * 3. Relative to project root (detected by finding config/ directory)
+ */
+private fun resolveConfigFile(configPath: String): File {
+    val file = File(configPath)
+    
+    // If absolute path and exists, use it
+    if (file.isAbsolute && file.exists()) {
+        return file
+    }
+    
+    // If relative path exists in current directory, use it
+    if (file.exists()) {
+        return file
+    }
+    
+    // Try to find project root by looking for config/ directory
+    // Start from current working directory and go up
+    var currentDir = File(System.getProperty("user.dir"))
+    var maxDepth = 10 // Prevent infinite loop
+    var depth = 0
+    
+    while (depth < maxDepth) {
+        val configDir = File(currentDir, "config")
+        if (configDir.exists() && configDir.isDirectory) {
+            // Found project root, try config file from here
+            val projectConfigFile = File(currentDir, configPath)
+            if (projectConfigFile.exists()) {
+                return projectConfigFile
+            }
+        }
+        
+        val parent = currentDir.parentFile
+        if (parent == null || parent == currentDir) {
+            break // Reached filesystem root
+        }
+        currentDir = parent
+        depth++
+    }
+    
+    // If still not found, try from user.dir directly (Gradle project root)
+    val projectRootFile = File(System.getProperty("user.dir"), configPath)
+    if (projectRootFile.exists()) {
+        return projectRootFile
+    }
+    
+    // Return original file (will throw error if not exists)
+    return file
+}
 
-    val rawSharedConfig = if (configFile.exists()) {
-        Json.decodeFromString<app.models.NodeConfig>(configFile.readText())
-    } else {
-        app.models.NodeConfig(
-            nodeId = "node1",
-            host = "auto",
-            port = 8081,
-            csHostUrl = "http://localhost:8080"
-        )
+fun main(args: Array<String>) {
+    val configPath = args.getOrNull(0) ?: "config/nodes/node.json"
+    val configFile = resolveConfigFile(configPath)
+    
+    if (!configFile.exists()) {
+        System.err.println("ERROR: Config file not found: $configPath")
+        System.err.println("  Tried: ${configFile.absolutePath}")
+        System.err.println("  Current working directory: ${System.getProperty("user.dir")}")
+        System.err.println("  Please specify correct path:")
+        System.err.println("    Windows: .\\gradlew :node:run --args \"config\\nodes\\node1.json\"")
+        System.err.println("    Linux:   ./gradlew :node:run --args \"config/nodes/node1.json\"")
+        System.exit(1)
+    }
+
+    val rawSharedConfig: SharedNodeConfig = try {
+        Json.decodeFromString<SharedNodeConfig>(configFile.readText())
+    } catch (e: Exception) {
+        System.err.println("ERROR: Failed to parse config file: ${configFile.absolutePath}")
+        System.err.println("  Error: ${e.message}")
+        System.exit(1)
+        // This will never execute but satisfies type checker
+        error("Config parsing failed")
     }
 
     // Only use csHostUrl from config file, no environment variable override
@@ -105,7 +169,7 @@ fun main(args: Array<String>) {
     println("  Node ID: ${sharedConfig.nodeId}")
     println("  Host: ${sharedConfig.host}:${sharedConfig.port}")
     println("  Bank Host URL: ${sharedConfig.csHostUrl} (from config file)")
-    println("  Config file: $configPath")
+    println("  Config file: ${configFile.absolutePath}")
 
     val nodeConfig = NodeConfig(
         sharedConfig = sharedConfig,
