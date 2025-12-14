@@ -106,7 +106,9 @@ class NodeApplication(private val config: NodeConfig) {
             sharedConfig
         )
         
-        val discoveryConfig = DiscoveryConfig()
+        val discoveryConfig = DiscoveryConfig(
+            bindInterface = sharedConfig.host  // Bind multicast to the detected IP
+        )
         nodeAnnouncer = NodeAnnouncer(discoveryConfig, sharedConfig)
         nodeAnnouncer.start()
         

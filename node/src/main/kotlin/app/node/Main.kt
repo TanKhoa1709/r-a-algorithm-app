@@ -82,7 +82,7 @@ private fun resolveHost(rawHost: String): String {
 }
 
 fun main(args: Array<String>) {
-    val configPath = args.getOrNull(0) ?: "config/nodes/node3.json"
+    val configPath = args.getOrNull(0) ?: "config/nodes/node1.json"
     val configFile = File(configPath)
 
     val rawSharedConfig = if (configFile.exists()) {

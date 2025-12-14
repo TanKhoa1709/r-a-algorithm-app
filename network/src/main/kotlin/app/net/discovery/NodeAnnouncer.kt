@@ -7,6 +7,7 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.MulticastSocket
+import java.net.NetworkInterface
 
 /**
  * Announces node presence via multicast
@@ -20,8 +21,23 @@ class NodeAnnouncer(
     
     fun start() {
         running = true
-        socket = MulticastSocket(config.multicastPort).apply {
-            joinGroup(InetAddress.getByName(config.multicastAddress))
+        val multicastGroup = InetAddress.getByName(config.multicastAddress)
+        
+        socket = if (config.bindInterface != null) {
+            // Bind to specific network interface
+            val bindAddr = InetAddress.getByName(config.bindInterface)
+            val networkInterface = NetworkInterface.getByInetAddress(bindAddr)
+            MulticastSocket(config.multicastPort).apply {
+                if (networkInterface != null) {
+                    setNetworkInterface(networkInterface)
+                }
+                joinGroup(multicastGroup)
+            }
+        } else {
+            // Try to bind to any available interface
+            MulticastSocket(config.multicastPort).apply {
+                joinGroup(multicastGroup)
+            }
         }
         
         Thread {
