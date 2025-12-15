@@ -131,25 +131,10 @@ class NodeController(
                             }
                         } catch (e: Exception) {
                             val errorMsg = e.message ?: "Unknown error"
-                            val errorClass = e.javaClass.simpleName
-                            val isConnectionError = errorClass.contains("Connect", ignoreCase = true) ||
-                                                   errorClass.contains("Timeout", ignoreCase = true) ||
-                                                   errorClass.contains("Socket", ignoreCase = true) ||
-                                                   errorMsg.contains("Connection", ignoreCase = true) ||
-                                                   errorMsg.contains("timeout", ignoreCase = true) ||
-                                                   errorMsg.contains("refused", ignoreCase = true) ||
-                                                   errorMsg.contains("unreachable", ignoreCase = true)
-                            
-                            if (isConnectionError) {
-                                eventLogger.warning("Bank Host connection failed, will retry in 10s", 
-                                    mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg, "attempt" to attempt.toString()))
-                                delay(10_000)
-                                continue // retry
-                            } else {
-                                eventLogger.error("Transaction error", 
-                                    mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg))
-                                TransactionResult(success = false, message = errorMsg, balance = 0L)
-                            }
+                            eventLogger.warning("Bank Host unreachable, will retry in 10s",
+                                mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg, "attempt" to attempt.toString()))
+                            delay(10_000)
+                            continue // always retry on connection/transport errors
                         }
                         
                         if (result.success) {
