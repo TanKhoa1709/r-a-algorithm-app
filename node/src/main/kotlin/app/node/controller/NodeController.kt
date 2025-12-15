@@ -113,59 +113,65 @@ class NodeController(
                 if (transactionType != null && amount != null && requestId != null) {
                     eventLogger.success("Entered CS for $transactionType", 
                         mapOf("requestId" to requestId, "amount" to amount.toString(), "clock" to ricartAgrawala.getClock().toString()))
-                    
-                    val result = try {
-                        when (transactionType) {
-                            "WITHDRAW" -> {
-                                eventLogger.info("Executing withdraw", mapOf("amount" to amount.toString()))
-                                csInteractionController.withdraw(config.sharedConfig.nodeId, requestId, amount)
+
+                    var attempt = 0
+                    while (true) {
+                        attempt++
+                        val result = try {
+                            when (transactionType) {
+                                "WITHDRAW" -> {
+                                    eventLogger.info("Executing withdraw", mapOf("amount" to amount.toString(), "attempt" to attempt.toString()))
+                                    csInteractionController.withdraw(config.sharedConfig.nodeId, requestId, amount)
+                                }
+                                "DEPOSIT" -> {
+                                    eventLogger.info("Executing deposit", mapOf("amount" to amount.toString(), "attempt" to attempt.toString()))
+                                    csInteractionController.deposit(config.sharedConfig.nodeId, requestId, amount)
+                                }
+                                else -> TransactionResult(success = false, message = "Unknown transaction type", balance = 0L)
                             }
-                            "DEPOSIT" -> {
-                                eventLogger.info("Executing deposit", mapOf("amount" to amount.toString()))
-                                csInteractionController.deposit(config.sharedConfig.nodeId, requestId, amount)
+                        } catch (e: Exception) {
+                            val errorMsg = e.message ?: "Unknown error"
+                            val errorClass = e.javaClass.simpleName
+                            val isConnectionError = errorClass.contains("Connect", ignoreCase = true) ||
+                                                   errorClass.contains("Timeout", ignoreCase = true) ||
+                                                   errorClass.contains("Socket", ignoreCase = true) ||
+                                                   errorMsg.contains("Connection", ignoreCase = true) ||
+                                                   errorMsg.contains("timeout", ignoreCase = true) ||
+                                                   errorMsg.contains("refused", ignoreCase = true) ||
+                                                   errorMsg.contains("unreachable", ignoreCase = true)
+                            
+                            if (isConnectionError) {
+                                eventLogger.warning("Bank Host connection failed, will retry in 10s", 
+                                    mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg, "attempt" to attempt.toString()))
+                                delay(10_000)
+                                continue // retry
+                            } else {
+                                eventLogger.error("Transaction error", 
+                                    mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg))
+                                TransactionResult(success = false, message = errorMsg, balance = 0L)
                             }
-                            else -> TransactionResult(success = false, message = "Unknown transaction type", balance = 0L)
                         }
-                    } catch (e: Exception) {
-                        val errorMsg = e.message ?: "Unknown error"
-                        val errorClass = e.javaClass.simpleName
-                        val isConnectionError = errorClass.contains("Connect", ignoreCase = true) ||
-                                               errorClass.contains("Timeout", ignoreCase = true) ||
-                                               errorClass.contains("Socket", ignoreCase = true) ||
-                                               errorMsg.contains("Connection", ignoreCase = true) ||
-                                               errorMsg.contains("timeout", ignoreCase = true) ||
-                                               errorMsg.contains("refused", ignoreCase = true) ||
-                                               errorMsg.contains("unreachable", ignoreCase = true)
                         
-                        if (isConnectionError) {
-                            eventLogger.error("Bank Host connection failed - Cancelling transaction", 
-                                mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg))
-                            transactionResult?.complete(TransactionResult(success = false, message = "Bank Host connection failed: $errorMsg", balance = 0L))
+                        if (result.success) {
+                            eventLogger.success("Transaction successful", 
+                                mapOf("type" to transactionType, "amount" to amount.toString(), "balance" to result.balance.toString(), "attempt" to attempt.toString()))
+                            delay(5000)
+                            transactionResult?.complete(result)
                             releaseCriticalSection()
-                            return@launch
+                            break
                         } else {
-                            eventLogger.error("Transaction error", 
-                                mapOf("type" to transactionType, "amount" to amount.toString(), "error" to errorMsg))
-                            TransactionResult(success = false, message = errorMsg, balance = 0L)
+                            if (transactionType == "WITHDRAW") {
+                                eventLogger.warning("Withdraw failed: Insufficient balance", 
+                                    mapOf("amount" to amount.toString(), "currentBalance" to result.balance.toString(), "message" to result.message))
+                            } else {
+                                eventLogger.error("Transaction failed", 
+                                    mapOf("type" to transactionType, "amount" to amount.toString(), "message" to result.message))
+                            }
+                            transactionResult?.complete(result)
+                            releaseCriticalSection()
+                            break
                         }
                     }
-                    
-                    if (result.success) {
-                        eventLogger.success("Transaction successful", 
-                            mapOf("type" to transactionType, "amount" to amount.toString(), "balance" to result.balance.toString()))
-                    } else {
-                        if (transactionType == "WITHDRAW") {
-                            eventLogger.warning("Withdraw failed: Insufficient balance", 
-                                mapOf("amount" to amount.toString(), "currentBalance" to result.balance.toString(), "message" to result.message))
-                        } else {
-                            eventLogger.error("Transaction failed", 
-                                mapOf("type" to transactionType, "amount" to amount.toString(), "message" to result.message))
-                        }
-                    }
-                    
-                    delay(5000)
-                    transactionResult?.complete(result)
-                    releaseCriticalSection()
                 }
             } catch (e: Exception) {
                 val errorMsg = e.message ?: "Unknown error"

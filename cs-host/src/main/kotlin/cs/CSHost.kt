@@ -224,14 +224,17 @@ class CSHost(
         val state = getState()
         val history = getAccessHistory()
 
+        // Fallback: if currentHolder is null, use the latest history entry to avoid showing "None"
+        val effectiveHolder = state.currentHolder ?: history.lastOrNull()?.nodeId
+
         val nodeIds = buildSet {
-            state.currentHolder?.let { add(it) }
+            effectiveHolder?.let { add(it) }
             history.forEach { add(it.nodeId) }
         }
 
         val nodes = nodeIds.map { id ->
             val csState = when {
-                state.currentHolder == id -> "IN_CS"
+                effectiveHolder == id -> "IN_CS"
                 else -> "IDLE"
             }
             VisualizerNodeDto(
@@ -251,7 +254,7 @@ class CSHost(
         
         return VisualizerSnapshot(
             nodes = nodes,
-            currentHolder = state.currentHolder,
+            currentHolder = effectiveHolder,
             queue = emptyList(),
             accessHistory = history,
             metrics = metricsDto,
