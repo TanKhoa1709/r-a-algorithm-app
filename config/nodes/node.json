@@ -1,8 +1,8 @@
 {
-    "nodeId": "toanehihi-node",
+    "nodeId": "3",
     "host": "auto",
-    "port": 3636,
-    "csHostUrl": "http://192.168.20.249:8080",
+    "port": 8003,
+    "csHostUrl": "http://localhost:8080",
     "discoveryPort": 8888,
     "heartbeatInterval": 5000,
     "requestTimeout": 30000

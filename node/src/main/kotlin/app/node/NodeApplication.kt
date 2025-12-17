@@ -182,7 +182,7 @@ class NodeApplication(private val config: NodeConfig) {
     private fun handleMessage(message: String) {
         messageHandler.handleMessage(
             message,
-            onRequest = { ramessage -> 
+            onRequest = { ramessage ->
                 if (ramessage.nodeId != sharedConfig.nodeId) {
                     val messageKey = "REQUEST:${ramessage.nodeId}:${ramessage.requestId}:${ramessage.timestamp}"
                     if (processedMessages.add(messageKey)) {
@@ -190,8 +190,8 @@ class NodeApplication(private val config: NodeConfig) {
                         if (processedMessages.size > 1000) {
                             processedMessages.clear()
                         }
+                        ricartAgrawala.handleRequest(ramessage)
                     }
-                    ricartAgrawala.handleRequest(ramessage)
                 }
             },
             onReply = { ramessage -> 
@@ -202,8 +202,8 @@ class NodeApplication(private val config: NodeConfig) {
                         if (processedMessages.size > 1000) {
                             processedMessages.clear()
                         }
+                        ricartAgrawala.handleReply(ramessage)
                     }
-                    ricartAgrawala.handleReply(ramessage)
                 }
             },
             onRelease = { ramessage -> 
@@ -214,8 +214,8 @@ class NodeApplication(private val config: NodeConfig) {
                         if (processedMessages.size > 1000) {
                             processedMessages.clear()
                         }
+                        ricartAgrawala.handleRelease(ramessage)
                     }
-                    ricartAgrawala.handleRelease(ramessage)
                 }
             }
         )
